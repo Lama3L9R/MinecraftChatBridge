@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+group 'icu.lama'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    mavenLocal()
+}
+
+dependencies {
+    implementation 'com.github.pengrad:java-telegram-bot-api:6.3.0'
+    compileOnly project(':MinecraftChatBridgeCore')
+}
+
+shadowJar {
+    //exclude project(":MinecraftChatBridgeCore")
+}

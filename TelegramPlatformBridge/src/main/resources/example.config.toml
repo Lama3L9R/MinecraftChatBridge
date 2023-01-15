@@ -1,0 +1,5 @@
+[telegram]
+mainClass = "icu.lama.minecraft.chatbridge.platforms.telegram.TelegramChatPlatform"
+chatId = -114514
+[telegram.credentials]
+botToken = "YOUR_BOT_TOKEN_HERE"
