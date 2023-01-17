@@ -1,0 +1,8 @@
+[telegram.extraContents]
+group = "some group name"
+[telegram.credentials]
+skey = ""
+wxsid = ""
+wxuin = ""
+passTicket = ""
+cookie = ""
