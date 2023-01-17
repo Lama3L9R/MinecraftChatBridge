@@ -26,6 +26,11 @@ public class MinecraftChatBridge {
 
     private static IMinecraftBridge minecraftBridge;
 
+    private static ErrorCallback onError = (exception, source) -> {
+        System.err.println("A runtime error was found on " + source.getPlatformName());
+        exception.printStackTrace();
+    };
+
     private static final PlatformReceiveCallback platformReceiveCallback = (platform, name, msg) -> {
         UUID uuid = null;
         if (platform.getBindingDatabase() != null) {
@@ -54,9 +59,28 @@ public class MinecraftChatBridge {
     public static void init(@NotNull ChatBridgeConfiguration coreConf,
                             @NotNull Map<String, PlatformConfiguration> platformConf,
                             @NotNull IMinecraftBridge bridge) throws Exception {
+        init(coreConf, platformConf, bridge, null);
+    }
+
+    /**
+     * Init minecraft chat bridge.
+     *
+     * @param coreConf chat bridge configurations
+     * @param platformConf platform configurations
+     * @param bridge minecraft bridge instance (aka this method caller)
+     * @param errorHandler invoke this callback whenever there is a caught error
+     */
+    public static void init(@NotNull ChatBridgeConfiguration coreConf,
+                            @NotNull Map<String, PlatformConfiguration> platformConf,
+                            @NotNull IMinecraftBridge bridge,
+                            @Nullable ErrorCallback errorHandler) throws Exception {
         Objects.requireNonNull(coreConf);
         Objects.requireNonNull(platformConf);
         Objects.requireNonNull(bridge);
+
+        if (errorHandler != null) {
+            onError = errorHandler;
+        }
 
         config = coreConf;
         minecraftBridge = bridge;
@@ -148,5 +172,9 @@ public class MinecraftChatBridge {
      */
     public static @Nullable IPlatformBridge getPlatform(String name) {
         return platforms.get(name);
+    }
+
+    public static void throwException(Exception e, IPlatformBridge source) {
+        onError.onError(e, source);
     }
 }
