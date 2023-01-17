@@ -41,7 +41,7 @@ rep = requests.get("https://login.wx.qq.com/qrcode/" + uuid + "?t=webwx")
 
 with open("tmp.jpg", "wb") as f:
     f.write(rep.content)
-    f.close
+    f.close()
 
 with Image.open("tmp.jpg") as img:
     img.show()
