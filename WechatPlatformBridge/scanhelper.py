@@ -87,5 +87,5 @@ cookie: {base64.b64encode(cookie.encode('utf-8')).decode('ascii')}
 """
 )
 
-print("Apply these values to the bridge crendentials configuration.")
+print("Apply these values to the bridge credentials configuration.")
 print("**** DO NOT SHARE YOUR CREDENTIALS WITH ANYONE ****")
