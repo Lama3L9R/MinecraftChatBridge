@@ -1,11 +1,9 @@
 # WechatPlatformBridge
 
-官方支持的微信平台链接桥
-
 [![996.icu](https://img.shields.io/badge/link-996.icu-red.svg)](https://996.icu)
 [![LICENSE](https://img.shields.io/badge/license-Anti%20996-blue.svg)](https://github.com/996icu/996.ICU/blob/master/LICENSE)
 
----
+_官方支持的微信平台链接桥_
 
 ## 我是用户
 
@@ -20,7 +18,7 @@
 1. 绝对不要将这个界面截图给任何你不信任的人
 2. 如果一定需要截图，可以先登陆一次正常的 PC 版/网页版，再回到这个窗口进行截图（切记不要再登陆一次）
 3. 注意扫完码之后点完确认登陆（如果有，包括 5 秒异地登陆警告），都点完了再回来按下回车继续
-4. 登陆成功后会提示 `login done`，请尽快将下方提示的数据填写在配置文件里并启动服务器
+4. 登陆成功后会提示 `login complete`，请尽快将下方提示的数据填写在配置文件里并启动服务器
 5. Cookie 一项比较长，不要漏了
 
 示例：一个正常的输出
