@@ -10,7 +10,7 @@ _官方支持的微信平台链接桥_
 ### 首先，你需要使用同目录下的 `scanhelper.py` 来登录
 
 1. 安装最新的 `python3`
-2. 执行 `pip install requests pillow`
+2. 执行 `pip install requests`
 3. 使用 `python scanhelper.py`
 
 **_使用时需要注意_**
