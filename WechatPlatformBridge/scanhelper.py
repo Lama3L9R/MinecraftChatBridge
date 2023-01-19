@@ -16,12 +16,12 @@ MAGIC = "Go8FCIkFEokFCggwMDAwMDAwMRAGGvAESySibk50w5Wb3uTl2c2h64jVVrV7gNs06GFlWpl
 
 
 def substrBetween(str, start, end):
-    start = str.find(start)
-    if start >= 0:
-        start += len(start)
-        end = str.find(end, start)
-        if end >= 0:
-            return str[start:end].strip()
+    start_index = str.find(start)
+    if start_index >= 0:
+        start_index += len(start)
+        end_index = str.find(end, start_index)
+        if end_index >= 0:
+            return str[start_index:end_index].strip()
 
 
 logging.info("scanhelper v1.0")
