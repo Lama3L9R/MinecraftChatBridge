@@ -2,12 +2,9 @@ package icu.lama.minecraft.chatbridge.platforms.wx.api.utils;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class CookieStore {
-    private static final Pattern COOKIE_SPLIT = Pattern.compile("(\\S+) ?= ?(\\S+)");
     private final HashMap<String, String> cookies = new HashMap<>();
 
     public CookieStore() { }

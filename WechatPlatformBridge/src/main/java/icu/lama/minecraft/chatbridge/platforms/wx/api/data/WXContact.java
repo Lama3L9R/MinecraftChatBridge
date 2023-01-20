@@ -1,7 +1,8 @@
 package icu.lama.minecraft.chatbridge.platforms.wx.api.data;
 
-import java.util.List;
 import com.google.gson.annotations.SerializedName;
+
+import java.util.List;
 
 public class WXContact{
 

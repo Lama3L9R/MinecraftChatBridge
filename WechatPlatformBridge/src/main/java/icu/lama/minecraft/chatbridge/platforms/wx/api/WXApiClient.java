@@ -17,15 +17,15 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class WXApiClient {
-    private RequestBase base;
-    private String passTicket;
+    private final RequestBase base;
+    private final String passTicket;
     private WXSyncKey syncKey;
-    private ScheduledExecutorService taskExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService taskExecutor = Executors.newSingleThreadScheduledExecutor();
     private OnErrorCallback onError;
     private OnMessageCallback onMessage;
     private String wxUsername;
@@ -114,14 +114,20 @@ public class WXApiClient {
         }
     }
 
-    public void sendMessage(String message, String userID) throws Exception {
-        HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg"
-                + "?pass_ticket=" + urlEncode(passTicket), new RequestSendMessage(base, new WXMessage(message, wxUsername, userID)));
-        ResponseSendMessage response = result.deserialize(new TypeToken<ResponseSendMessage>() {});
+    public void sendMessage(String message, String userID) {
+        taskExecutor.submit(() -> {
+            try {
+                HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxsendmsg"
+                        + "?pass_ticket=" + urlEncode(passTicket), new RequestSendMessage(base, new WXMessage(message, wxUsername, userID)));
+                ResponseSendMessage response = result.deserialize(new TypeToken<>() { });
 
-        if (response.getBaseResponse().getRet() != 0) {
-            throw new RuntimeException("Failed to send message! server return:" + response.getBaseResponse());
-        }
+                if (response.getBaseResponse().getRet() != 0) {
+                    throw new RuntimeException("Failed to send message! server return:" + response.getBaseResponse());
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     public WXContact queryContactInformation(String contactID) throws Exception {

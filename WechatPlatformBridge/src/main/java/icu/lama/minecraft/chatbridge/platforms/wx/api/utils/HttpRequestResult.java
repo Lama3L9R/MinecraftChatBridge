@@ -9,7 +9,7 @@ public class HttpRequestResult {
     private static final Gson GSON = new Gson();
 
     private int statusCode;
-    private byte[] data;
+    private final byte[] data;
 
     public HttpRequestResult(int statusCode, byte[] data) {
         this.statusCode = statusCode;
