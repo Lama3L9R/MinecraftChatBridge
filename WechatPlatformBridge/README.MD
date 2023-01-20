@@ -54,9 +54,9 @@ wechat:
 
 ```toml
 # toml
-[telegram.extraContents]
+[wechat.extraContents]
 group = "some group name"
-[telegram.credentials]
+[wechat.credentials]
 skey = ""
 wxsid = ""
 wxuin = ""
@@ -68,7 +68,7 @@ cookie = ""
 //json
 
 {
-  "telegram": {
+  "wechat": {
     "extraContents": {
       "group": "some group name"
     },
@@ -88,3 +88,7 @@ cookie = ""
 ## 我是开发者，我想贡献代码
 
 欢迎开 PR :)
+
+## TODO
+
+1. [ ] 添加从网页版导入 Session

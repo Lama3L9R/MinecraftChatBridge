@@ -22,8 +22,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class WXApiClient {
-    private static final Pattern SYNC_REGEX = Pattern.compile("window.synccheck=\\{retcode:\"?(\\d)\"?,selector:\"?(\\d)\"?}");
-
     private RequestBase base;
     private String passTicket;
     private WXSyncKey syncKey;
@@ -31,13 +29,14 @@ public class WXApiClient {
     private OnErrorCallback onError;
     private OnMessageCallback onMessage;
     private String wxUsername;
+    private List<WXContact> mainContacts;
 
     public WXApiClient(RequestBase base, String passTicket, String cookie) throws Exception {
         this.base = base;
         this.passTicket = passTicket;
 
         RequestHelper.setSkipSSLCheck();
-        RequestHelper.setCookie(cookie);
+        RequestHelper.setCookieStore(cookie);
     }
 
     public void init(OnMessageCallback onMessage, OnErrorCallback errorCallback) throws Exception {
@@ -52,6 +51,7 @@ public class WXApiClient {
             throw new RuntimeException("Failed to perform wxapi init. status code=" + result.getStatusCode() + ". remote response=" + response);
         }
 
+        mainContacts = response.getContactList();
         syncKey = response.getSyncKey();
         wxUsername = response.getUser().getUserName();
     }
@@ -72,14 +72,29 @@ public class WXApiClient {
                     + "&uin=" + base.getUin()
                     + "&deviceid=" + urlEncode(base.getDeviceID())
                     + "&synckey=" + urlEncode("" + syncKey), null);
-            Matcher syncResponse = SYNC_REGEX.matcher(result.toString());
-            int ret = Integer.parseInt(syncResponse.group(1));
-            int selector = Integer.parseInt(syncResponse.group(2));
+            String response = result.toString().split("=", 2)[1]
+                    .replace(" ", "")
+                    .replace("{", "")
+                    .replace("}", "");
+            int ret = Integer.MIN_VALUE;
+            int selector = Integer.MIN_VALUE;
+            for (String field : response.split(",")) {
+                String[] kv = field.split(":", 2);
+                switch (kv[0]) {
+                    case "retcode":
+                        ret = Integer.parseInt(kv[1].replace("\"", ""));
+                        break;
+                    case "selector":
+                        selector = Integer.parseInt(kv[1].replace("\"", ""));
+                        break;
+                }
+            }
+
             if (ret != 0) {
                 throw new RuntimeException("Failed to sync with messages! Error code: " + ret);
             }
 
-            if (selector != 2) {
+            if (selector == 0) {
                 return;
             }
 
@@ -87,13 +102,13 @@ public class WXApiClient {
                     + "?sid=" + urlEncode(base.getSid())
                     + "&skey=" + urlEncode(base.getSkey())
                     + "&uin=" + base.getUin(), new RequestWXSync(base, syncKey));
-            ResponseWXSync response = result.deserialize(new TypeToken<>() {});
-            this.syncKey = response.getSyncKey();
-            if (response.getAddMsgCount() == 0) {
+            ResponseWXSync syncResponse = result.deserialize(new TypeToken<>() {});
+            this.syncKey = syncResponse.getSyncKey();
+            if (syncResponse.getAddMsgCount() == 0) {
                 return;
             }
 
-            onMessage.onMessage(response);
+            onMessage.onMessage(syncResponse);
         } catch (Exception e) {
             onError.onError(e);
         }
@@ -110,11 +125,17 @@ public class WXApiClient {
     }
 
     public WXContact queryContactInformation(String contactID) throws Exception {
-        HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxbatchgetcontact"
-                + "?pass_ticket=" + urlEncode(passTicket), new RequestBatchGetContact(base, Arrays.asList(new WXContactQueryItem(contactID))));
-        ResponseQueryContact response = result.deserialize(new TypeToken<>() { });
-        return response.getContactList().size() == 0 ? null : response.getContactList().get(0);
+        List<WXContact> result = queryContactInformation(new WXContactQueryItem(contactID));
+        return result.size() == 0 ? null : result.get(0);
     }
+
+    public List<WXContact> queryContactInformation(WXContactQueryItem... items) throws Exception {
+        HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxbatchgetcontact"
+                + "?pass_ticket=" + urlEncode(passTicket), new RequestBatchGetContact(base, Arrays.asList(items)));
+        ResponseQueryContact response = result.deserialize(new TypeToken<>() { });
+        return response.getContactList();
+    }
+
 
     public List<WXContact> queryAllContact() throws Exception {
         HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetcontact"
@@ -122,6 +143,10 @@ public class WXApiClient {
                 + "&skey" + urlEncode(base.getSkey()), new RequestWXGetContact(base));
         ResponseQueryContact response = result.deserialize(new TypeToken<>() { });
         return response.getContactList();
+    }
+
+    public List<WXContact> getMainContacts() {
+        return mainContacts;
     }
 
     private String urlEncode(String data) {

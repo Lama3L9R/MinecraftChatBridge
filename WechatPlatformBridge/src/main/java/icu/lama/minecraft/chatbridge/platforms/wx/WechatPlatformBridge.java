@@ -7,6 +7,7 @@ import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.WXApiClient;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContact;
+import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContactQueryItem;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.out.RequestBase;
 
 import java.nio.charset.StandardCharsets;
@@ -14,14 +15,10 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Random;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class WechatPlatformBridge implements IPlatformBridge {
     @SuppressWarnings("unused")
     public static WechatPlatformBridge INSTANCE = new WechatPlatformBridge();
-    private static final Pattern SPLIT_NAME_CONTENT = Pattern.compile("[@a-zA-z0-9]*:(<br\\/>)?(.+)");
-
     private final HashMap<String, String> uidToName = new HashMap<>();
     private PlatformReceiveCallback callback;
     private PlatformConfiguration config;
@@ -61,7 +58,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
         String passTicket = this.config.getCredentials("passTicket");
 
         RequestBase base = new RequestBase(
-            Integer.parseInt(this.config.getCredentials("wxuin")),
+            Long.parseLong(this.config.getCredentials("wxuin")),
             this.config.getCredentials("wxsid"),
             this.config.getCredentials("skey"),
             "e" + String.valueOf(new Random().nextLong()).substring(1, 16)
@@ -74,19 +71,25 @@ public class WechatPlatformBridge implements IPlatformBridge {
                 response.getAddMsgList().stream()
                         .filter(it -> it.getFromUserName().equals(groupContact.getUserName()))
                         .forEach(it -> {
-                            Matcher content = SPLIT_NAME_CONTENT.matcher(it.getContent());
+                            String[] content = it.getContent().replace("<br/>", "").split(":", 2);
 
-                            this.callback.onReceive(this, uidToName.get(content.group(1)), content.group(3));
+                            this.callback.onReceive(this, uidToName.get(content[0]), content[1]);
                         });
             }, (e) -> MinecraftChatBridge.throwException(e, this));
 
             String targetGroupName = "" + this.config.get("group");
-            apiClient.queryAllContact().stream()
+            apiClient.getMainContacts().stream()
                     .filter(it -> it.getMemberCount() > 0 && it.getUserName().startsWith("@@"))
-                    .filter(it -> it.getNickName().equals(targetGroupName)).findFirst().ifPresentOrElse((target) -> groupContact = target,
+                    .filter(it -> it.getNickName().equals(targetGroupName)).findFirst().ifPresentOrElse(
+                            (target) -> groupContact = target,
                             () -> { throw new RuntimeException("Group not found!"); });
 
-            groupContact.getMemberList().forEach((it) -> uidToName.put(it.getUserName(), it.getDisplayName()));
+            String encry = apiClient.queryContactInformation(groupContact.getUserName()).getEncryChatRoomId();
+            apiClient.queryContactInformation(groupContact.getMemberList()
+                    .stream()
+                    .map(it -> new WXContactQueryItem(it.getUserName(), encry))
+                    .toArray(WXContactQueryItem[]::new)
+            ).forEach(it -> uidToName.put(it.getUserName(), it.getDisplayName()));
 
             apiClient.startPollMessages();
         } catch (Exception e) {

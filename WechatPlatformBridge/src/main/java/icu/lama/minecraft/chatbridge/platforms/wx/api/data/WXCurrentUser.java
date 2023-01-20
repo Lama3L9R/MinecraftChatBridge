@@ -50,7 +50,7 @@ public class WXCurrentUser{
 	private String remarkPYQuanPin;
 
 	@SerializedName("Uin")
-	private int uin;
+	private long uin;
 
 	@SerializedName("VerifyFlag")
 	private int verifyFlag;
@@ -181,11 +181,11 @@ public class WXCurrentUser{
 		return remarkPYQuanPin;
 	}
 
-	public void setUin(int uin){
+	public void setUin(long uin){
 		this.uin = uin;
 	}
 
-	public int getUin(){
+	public long getUin(){
 		return uin;
 	}
 

@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName;
 public class RequestBase {
 
     @SerializedName("Uin")
-    private Integer uin;
+    private Long uin;
     @SerializedName("Sid")
     private String sid;
     @SerializedName("Skey")
@@ -13,18 +13,18 @@ public class RequestBase {
     @SerializedName("DeviceID")
     private String deviceID;
 
-    public RequestBase(Integer uin, String sid, String skey, String deviceID) {
+    public RequestBase(Long uin, String sid, String skey, String deviceID) {
         this.uin = uin;
         this.sid = sid;
         this.skey = skey;
         this.deviceID = deviceID;
     }
 
-    public Integer getUin() {
+    public Long getUin() {
         return uin;
     }
 
-    public void setUin(Integer uin) {
+    public void setUin(Long uin) {
         this.uin = uin;
     }
 

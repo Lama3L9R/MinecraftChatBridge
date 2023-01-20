@@ -12,7 +12,7 @@ public class ResponseQueryContact {
 	@SerializedName("Count")
 	private int count;
 
-	@SerializedName("ContactList")
+	@SerializedName(value = "ContactList", alternate = "MemberList")
 	private List<WXContact> contactList;
 
 	public void setBaseResponse(ResponseBase baseResponse){

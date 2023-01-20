@@ -1,5 +1,5 @@
 {
-  "telegram": {
+  "wechat": {
     "extraContents": {
       "group": "some group name"
     },

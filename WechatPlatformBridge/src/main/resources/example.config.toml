@@ -1,6 +1,6 @@
-[telegram.extraContents]
+[wechat.extraContents]
 group = "some group name"
-[telegram.credentials]
+[wechat.credentials]
 skey = ""
 wxsid = ""
 wxuin = ""

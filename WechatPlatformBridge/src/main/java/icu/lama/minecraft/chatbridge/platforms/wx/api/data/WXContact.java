@@ -12,7 +12,7 @@ public class WXContact{
 	private int sex;
 
 	@SerializedName("AttrStatus")
-	private int attrStatus;
+	private long attrStatus;
 
 	@SerializedName("Statues")
 	private int statues;
@@ -87,10 +87,10 @@ public class WXContact{
 	private String remarkPYQuanPin;
 
 	@SerializedName("Uin")
-	private int uin;
+	private long uin;
 
 	@SerializedName("OwnerUin")
-	private int ownerUin;
+	private long ownerUin;
 
 	@SerializedName("IsOwner")
 	private int isOwner;
@@ -114,11 +114,11 @@ public class WXContact{
 		return sex;
 	}
 
-	public void setAttrStatus(int attrStatus){
+	public void setAttrStatus(long attrStatus){
 		this.attrStatus = attrStatus;
 	}
 
-	public int getAttrStatus(){
+	public long getAttrStatus(){
 		return attrStatus;
 	}
 
@@ -314,19 +314,19 @@ public class WXContact{
 		return remarkPYQuanPin;
 	}
 
-	public void setUin(int uin){
+	public void setUin(long uin){
 		this.uin = uin;
 	}
 
-	public int getUin(){
+	public long getUin(){
 		return uin;
 	}
 
-	public void setOwnerUin(int ownerUin){
+	public void setOwnerUin(long ownerUin){
 		this.ownerUin = ownerUin;
 	}
 
-	public int getOwnerUin(){
+	public long getOwnerUin(){
 		return ownerUin;
 	}
 
