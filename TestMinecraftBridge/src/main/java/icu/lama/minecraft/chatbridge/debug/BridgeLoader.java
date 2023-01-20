@@ -20,14 +20,12 @@ import java.util.UUID;
 
 public class BridgeLoader implements IMinecraftBridge {
     private static MinecraftReceiveCallback callback = MinecraftChatBridge.minecraftReceiveCallback;
-    private static Gson gson = new Gson();
+    private static final Gson gson = new Gson();
 
-    private static BridgeLoader bridge = new BridgeLoader();
+    private static final BridgeLoader bridge = new BridgeLoader();
 
     public static void main(String[] args) throws Exception {
         File conf = new File("config.json");
-//        JsonElement root = JsonParser.parseReader(new FileReader(conf));
-//        root.getAsJsonObject().get("");
         if (!conf.exists()) {
             conf.createNewFile();
             return;
@@ -35,6 +33,7 @@ public class BridgeLoader implements IMinecraftBridge {
         BridgeMixedConfig config = gson.fromJson(new FileReader(conf), new TypeToken<>() { });
 
         MinecraftChatBridge.init(config.core, config.platformConf, bridge);
+        System.out.println("Platform bridge tester started! you can now send messages. type '!quit' to exit");
 
         Scanner scanner = new Scanner(System.in);
         while(true) {
