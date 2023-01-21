@@ -87,6 +87,10 @@ public class MinecraftChatBridge {
         bridge.setReceiveCallback(minecraftReceiveCallback);
 
         File platformDirectory = new File(config.bridgeDirectory);
+        if (!platformDirectory.exists()) {
+            platformDirectory.mkdir();
+        }
+
         List<URL> listURLs =Arrays.stream(platformDirectory.listFiles(file -> file.getName().endsWith(".jar")))
                 .map(File::toURI)
                 .map(uri -> {
@@ -131,6 +135,10 @@ public class MinecraftChatBridge {
 
         platformConf.forEach((pName, pConf) -> {
             IPlatformBridge instance = getPlatform(pName);
+            if (instance == null) {
+                return;
+            }
+
             pConf.mainClass = instance.getClass().getName();
 
             instance.setConfiguration(pConf);
