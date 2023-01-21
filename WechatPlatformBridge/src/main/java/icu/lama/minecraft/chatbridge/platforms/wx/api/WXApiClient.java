@@ -25,7 +25,7 @@ public class WXApiClient {
     private final RequestBase base;
     private final String passTicket;
     private WXSyncKey syncKey;
-    private final ScheduledExecutorService taskExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService taskExecutor = Executors.newScheduledThreadPool(2);
     private OnErrorCallback onError;
     private OnMessageCallback onMessage;
     private String wxUsername;

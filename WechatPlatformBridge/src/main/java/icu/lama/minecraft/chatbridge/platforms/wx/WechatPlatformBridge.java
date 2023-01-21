@@ -71,6 +71,10 @@ public class WechatPlatformBridge implements IPlatformBridge {
                 response.getAddMsgList().stream()
                         .filter(it -> it.getFromUserName().equals(groupContact.getUserName()))
                         .forEach(it -> {
+                            if (it.getMsgType() != 1) {
+                                return;
+                            }
+
                             String[] content = it.getContent().replace("<br/>", "").split(":", 2);
 
                             this.callback.onReceive(this, uidToName.get(content[0]), content[1]);
@@ -80,9 +84,12 @@ public class WechatPlatformBridge implements IPlatformBridge {
             String targetGroupName = "" + this.config.get("group");
             apiClient.getMainContacts().stream()
                     .filter(it -> it.getMemberCount() > 0 && it.getUserName().startsWith("@@"))
-                    .filter(it -> it.getNickName().equals(targetGroupName)).findFirst().ifPresentOrElse(
-                            (target) -> groupContact = target,
-                            () -> { throw new RuntimeException("Group not found!"); });
+                    .filter(it -> it.getNickName().equals(targetGroupName))
+                    .findFirst()
+                    .ifPresentOrElse(
+                        (target) -> groupContact = target,
+                        () -> { throw new RuntimeException("Group not found!");
+                    });
 
             String encry = apiClient.queryContactInformation(groupContact.getUserName()).getEncryChatRoomId();
             apiClient.queryContactInformation(groupContact.getMemberList()
