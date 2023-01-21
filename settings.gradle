@@ -1,6 +1,20 @@
+// this repository for 'FabricChatBridge'
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
 rootProject.name = 'MinecraftChatBridge'
 include 'MinecraftChatBridgeCore'
 include 'TelegramPlatformBridge'
 include 'TestMinecraftBridge'
 include 'WechatPlatformBridge'
+include 'FabricChatBridge'
+include 'FabricChatBridge'
 
