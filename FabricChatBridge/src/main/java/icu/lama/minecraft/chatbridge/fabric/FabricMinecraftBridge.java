@@ -43,13 +43,17 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
       try {
          ServerLifecycleEvents.SERVER_STARTED.register((server) -> this.serverInstance = server);
          ModConfig config = this.GSON.fromJson(new FileReader(this.configFile), new TypeToken<>() {});
-         if (config.format != null && config.format.isEmpty()) {
+         if (config.format != null && !config.format.isEmpty()) {
+            LOGGER.info("Override default format to: " + config.format);
             this.format = config.format;
+         } else {
+            LOGGER.info("Missing format, using default one: " + format);
          }
 
          MinecraftChatBridge.init(config.core, config.platformConf, this, (e, source) ->
                  this.LOGGER.error("Runtime error thrown by " + source.getPlatformName(), e)
          );
+         LOGGER.info("MinecraftChatBridge initialized complete");
 
          ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
                  this.callback.onReceive(sender.getName().getString(), sender.getUuid(), message.getSignedContent())
