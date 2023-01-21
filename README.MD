@@ -5,7 +5,7 @@
 
 一个转发MC聊天用的工具库，通过 `MinecraftChatBridgeCore` 来连接不同的MC平台（例如：`Bukkit` `Forge`等）和不同的聊天平台（例如：`telegram` `wechat`）
 
-目前官方已有 `telegram` 和 `wechat` 平台官方支持
+目前官方已有 `telegram`、`wechat`、`fabric`  平台官方支持，未来将加入 `Bukkit` `Forge` `Tencent-QQ` 等官方支持。
 
 ### 我是用户
 哦我的上帝，别来看我啊，去找对应的MC支持的帮助文件看啊！我怎么会知道对应的MC支持需要用的配置文件是啥格式啊！
