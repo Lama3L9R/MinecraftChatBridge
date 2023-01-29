@@ -9,6 +9,8 @@ import com.pengrad.telegrambot.response.SendResponse;
 import icu.lama.minecraft.chatbridge.core.PlatformReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
+import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
+import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,7 +28,11 @@ public class TelegramChatPlatform implements IPlatformBridge {
 
     @Override
     public void send(String name, UUID playerUUID, String msg) {
-        bot.execute(new SendMessage(chatId, name + ": " + msg), new Callback<SendMessage, SendResponse>() {
+        sendRaw(name + ": " + msg);
+    }
+
+    private void sendRaw(String msg) {
+        bot.execute(new SendMessage(chatId, msg), new Callback<SendMessage, SendResponse>() {
             @Override public void onResponse(SendMessage request, SendResponse response) { }
             @Override public void onFailure(SendMessage request, IOException e) { }
         });
@@ -66,6 +72,12 @@ public class TelegramChatPlatform implements IPlatformBridge {
             });
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         });
+        MinecraftEvents.onServerSetupComplete.subscribe((__, ___) -> sendRaw("[+] Server"));
+        MinecraftEvents.onServerBeginShutdown.subscribe((__, ___) -> sendRaw("[-] Server"));
+        MinecraftEvents.onPlayerJoin.subscribe((source, __) -> sendRaw("[+] " + source.getName()));
+        MinecraftEvents.onPlayerLeave.subscribe((source, __) -> sendRaw("[-] " + source.getName()));
+
+        PlatformEvents.onPlatformBridgeLoad.trigger(this, null);
     }
 
     @Override
