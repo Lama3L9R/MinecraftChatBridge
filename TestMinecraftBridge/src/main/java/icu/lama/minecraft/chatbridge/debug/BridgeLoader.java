@@ -8,6 +8,9 @@ import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
 import icu.lama.minecraft.chatbridge.core.MinecraftReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
+import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
+import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
+import icu.lama.minecraft.chatbridge.core.events.minecraft.MinecraftEvent;
 import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 
@@ -31,14 +34,19 @@ public class BridgeLoader implements IMinecraftBridge {
             return;
         }
         BridgeMixedConfig config = gson.fromJson(new FileReader(conf), new TypeToken<>() { });
+        PlatformEvents.onPlatformBridgeLoad.subscribe((source, __) -> {
+            System.out.println("[+] " + source.getPlatformName());
+        });
 
         MinecraftChatBridge.init(config.core, config.platformConf, bridge);
         System.out.println("Platform bridge tester started! you can now send messages. type '!quit' to exit");
 
+        MinecraftEvents.onServerSetupComplete.trigger(null, null);
         Scanner scanner = new Scanner(System.in);
         while(true) {
             String line = scanner.nextLine();
             if (line.equalsIgnoreCase("!quit")) {
+                MinecraftEvents.onServerBeginShutdown.trigger(null, null);
                 return;
             } else {
                 callback.onReceive("Console", UUID.randomUUID(), line);
