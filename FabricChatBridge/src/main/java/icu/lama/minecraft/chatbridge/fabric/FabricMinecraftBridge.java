@@ -6,6 +6,8 @@ import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
 import icu.lama.minecraft.chatbridge.core.MinecraftReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
+import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
+import icu.lama.minecraft.chatbridge.core.events.minecraft.MinecraftEventSource;
 import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 import java.io.File;
@@ -16,8 +18,10 @@ import java.util.UUID;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -41,7 +45,28 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
       }
 
       try {
-         ServerLifecycleEvents.SERVER_STARTED.register((server) -> this.serverInstance = server);
+         // Forward events
+         ServerLifecycleEvents.SERVER_STARTED.register((server) -> {
+            this.serverInstance = server;
+
+            MinecraftEvents.onServerSetupComplete.trigger(null, server);
+         });
+
+         ServerLifecycleEvents.SERVER_STOPPING.register((server) -> {
+            MinecraftEvents.onServerBeginShutdown.trigger(null, null);
+         });
+
+         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+            ServerPlayerEntity sPlayer = handler.getPlayer();
+            MinecraftEvents.onPlayerJoin.trigger(new MinecraftEventSource(sPlayer.getUuid(), sPlayer.getName().getString(), false), null);
+         });
+
+         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+            ServerPlayerEntity sPlayer = handler.getPlayer();
+            MinecraftEvents.onPlayerLeave.trigger(new MinecraftEventSource(sPlayer.getUuid(), sPlayer.getName().getString(), false), null);
+         });
+
+         // Load core
          ModConfig config = this.GSON.fromJson(new FileReader(this.configFile), new TypeToken<>() {});
          if (config.format != null && !config.format.isEmpty()) {
             LOGGER.info("Override default format to: " + config.format);
@@ -58,7 +83,6 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
          ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
                  this.callback.onReceive(sender.getName().getString(), sender.getUuid(), message.getSignedContent())
          );
-
       } catch (Exception e) {
          throw new RuntimeException(e);
       }

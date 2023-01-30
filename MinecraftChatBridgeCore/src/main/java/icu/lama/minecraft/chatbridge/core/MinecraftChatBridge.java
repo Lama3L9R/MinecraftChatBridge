@@ -16,6 +16,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 
 public class MinecraftChatBridge {
     private static ChatBridgeConfiguration config;
@@ -96,7 +97,7 @@ public class MinecraftChatBridge {
                 .map(uri -> {
                     try { return uri.toURL(); } catch (MalformedURLException e) { throw new RuntimeException(e); }
                 })
-                .toList();
+                .collect(Collectors.toList());
 
         URL[] urls = listURLs.toArray(new URL[listURLs.size()]);
 

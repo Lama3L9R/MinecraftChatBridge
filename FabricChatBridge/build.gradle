@@ -11,12 +11,13 @@ version = '1.0.0'
 group = 'icu.lama'
 
 dependencies {
+    implementation project(path: ':MinecraftChatBridgeCore')
     minecraft "com.mojang:minecraft:1.19.3"
     mappings "net.fabricmc:yarn:1.19.3+build.1:v2"
     modImplementation "net.fabricmc:fabric-loader:0.14.11"
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:0.68.1+1.19.3"
-    include(project(':MinecraftChatBridgeCore'))
+    include project(":MinecraftChatBridgeCore")
     implementation project(':MinecraftChatBridgeCore')
 }
 

@@ -4,6 +4,8 @@ import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
 import icu.lama.minecraft.chatbridge.core.PlatformReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
+import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
+import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.WXApiClient;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContact;
@@ -24,6 +26,10 @@ public class WechatPlatformBridge implements IPlatformBridge {
     private PlatformConfiguration config;
     private WXApiClient apiClient;
     private WXContact groupContact;
+    private String playerJoinFormat = "[+] %s";
+    private String playerLeaveFormat = "[-] %s";
+    private String serverOnlineFormat = "[+] Server";
+    private String serverOfflineFormat = "[-] Server";
 
     @Override
     public void send(String name, UUID playerUUID, String msg) {
@@ -54,6 +60,11 @@ public class WechatPlatformBridge implements IPlatformBridge {
 
     @Override
     public void init() {
+        this.config.get("lang.playerJoinFormat", f -> playerJoinFormat = (String) f);
+        this.config.get("lang.playerLeaveFormat", f -> playerLeaveFormat = (String) f);
+        this.config.get("lang.serverOnlineFormat", f -> serverOnlineFormat = (String) f);
+        this.config.get("lang.serverOfflineFormat", f -> serverOfflineFormat = (String) f);
+
         String cookies = new String(Base64.getDecoder().decode(this.config.getCredentials("cookie")), StandardCharsets.UTF_8);
         String passTicket = this.config.getCredentials("passTicket");
 
@@ -102,6 +113,17 @@ public class WechatPlatformBridge implements IPlatformBridge {
         } catch (Exception e) {
             MinecraftChatBridge.throwException(e, this);
         }
+
+        MinecraftEvents.onPlayerJoin.subscribe((source, d) ->
+            apiClient.sendMessage(String.format(playerJoinFormat, source.getName()), groupContact.getUserName()));
+        MinecraftEvents.onPlayerLeave.subscribe((source, d) ->
+                apiClient.sendMessage(String.format(playerLeaveFormat, source.getName()), groupContact.getUserName()));
+        MinecraftEvents.onServerSetupComplete.subscribe((source, d) ->
+                apiClient.sendMessage(String.format(serverOnlineFormat, source.getName()), groupContact.getUserName()));
+        MinecraftEvents.onServerBeginShutdown.subscribe((source, d) ->
+                apiClient.sendMessage(String.format(serverOfflineFormat, source.getName()), groupContact.getUserName()));
+
+        PlatformEvents.onPlatformBridgeLoad.trigger(this, null);
     }
 
     @Override

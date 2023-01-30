@@ -35,4 +35,15 @@ public class PlatformConfiguration {
     public Object get(String path) {
         return DPathUtils.getValue(extraContents, path);
     }
+
+    public void get(String path, Callback onExists) {
+        Object result = get(path);
+        if (result != null) {
+            onExists.run(result);
+        }
+    }
+
+    public interface Callback {
+        void run(Object obj);
+    }
 }
