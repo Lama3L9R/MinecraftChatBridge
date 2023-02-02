@@ -60,7 +60,7 @@ public class MinecraftChatBridge {
     public static void init(@NotNull ChatBridgeConfiguration coreConf,
                             @NotNull Map<String, PlatformConfiguration> platformConf,
                             @NotNull IMinecraftBridge bridge) throws Exception {
-        init(coreConf, platformConf, bridge, null);
+        init(coreConf, platformConf, bridge, (err, source) -> { });
     }
 
     /**
@@ -74,15 +74,13 @@ public class MinecraftChatBridge {
     public static void init(@NotNull ChatBridgeConfiguration coreConf,
                             @NotNull Map<String, PlatformConfiguration> platformConf,
                             @NotNull IMinecraftBridge bridge,
-                            @Nullable ErrorCallback errorHandler) throws Exception {
+                            @NotNull ErrorCallback errorHandler) throws Exception {
         Objects.requireNonNull(coreConf);
         Objects.requireNonNull(platformConf);
         Objects.requireNonNull(bridge);
+        Objects.requireNonNull(errorHandler);
 
-        if (errorHandler != null) {
-            onError = errorHandler;
-        }
-
+        onError = errorHandler;
         config = coreConf;
         minecraftBridge = bridge;
         bridge.setReceiveCallback(minecraftReceiveCallback);
@@ -99,7 +97,7 @@ public class MinecraftChatBridge {
                 })
                 .collect(Collectors.toList());
 
-        URL[] urls = listURLs.toArray(new URL[listURLs.size()]);
+        URL[] urls = listURLs.toArray(new URL[0]);
 
         classLoader = new URLClassLoader(urls, Thread.currentThread().getContextClassLoader());
 
@@ -112,7 +110,7 @@ public class MinecraftChatBridge {
 
                 String mainClassName = prop.getProperty("mainClass");
 
-                if (mainClassName.equalsIgnoreCase("manual")) {
+                if ("manual".equalsIgnoreCase(mainClassName)) {
                     return;
                 }
 
@@ -121,7 +119,7 @@ public class MinecraftChatBridge {
                 IPlatformBridge instance = (IPlatformBridge) instanceField.get(null);
 
                 register(instance, instance.getPlatformName());
-            } catch (IOException | NoSuchFieldException | ClassNotFoundException | IllegalAccessException e) {
+            } catch (IOException | NoSuchFieldException | ClassNotFoundException | IllegalAccessException | ClassCastException e) {
                 throw new RuntimeException(e);
             } finally {
                 if (jar != null) {
@@ -145,7 +143,11 @@ public class MinecraftChatBridge {
             instance.setConfiguration(pConf);
             instance.setReceiveCallback(platformReceiveCallback);
 
-            instance.init();
+            try {
+                instance.init();
+            } catch (Throwable exception) {
+                throwException(exception, instance);
+            }
         });
     }
 
@@ -183,7 +185,14 @@ public class MinecraftChatBridge {
         return platforms.get(name);
     }
 
-    public static void throwException(Exception e, IPlatformBridge source) {
+    /**
+     * Throw a runtime exception. Should always be called by Platform Bridge
+     * @param e exception
+     * @param source exception source
+     */
+    public static void throwException(Throwable e, @NotNull IPlatformBridge source) {
+        Objects.requireNonNull(source);
+
         onError.onError(e, source);
     }
 }
