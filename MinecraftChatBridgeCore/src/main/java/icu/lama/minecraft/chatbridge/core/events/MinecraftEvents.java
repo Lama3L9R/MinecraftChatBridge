@@ -15,4 +15,5 @@ public class MinecraftEvents {
 
     public static MinecraftEvent<Null> onPlayerJoin = new MinecraftEvent<>();
     public static MinecraftEvent<Null> onPlayerLeave = new MinecraftEvent<>();
+    public static MinecraftEvent<Null> onPlayerDeath = new MinecraftEvent<>();
 }
