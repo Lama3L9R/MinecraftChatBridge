@@ -5,6 +5,7 @@ import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
+import icu.lama.minecraft.chatbridge.core.proxy.IMinecraftServerProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,6 +27,8 @@ public class MinecraftChatBridge {
     private static final Map<String, IPlatformBridge> platforms = new HashMap<>();
 
     private static IMinecraftBridge minecraftBridge;
+
+    private static @Nullable IMinecraftServerProxy serverProxy = null;
 
     private static ErrorCallback onError = (exception, source) -> {
         System.err.println("A runtime error was found on " + source.getPlatformName());
@@ -194,5 +197,13 @@ public class MinecraftChatBridge {
         Objects.requireNonNull(source);
 
         onError.onError(e, source);
+    }
+
+    public static @Nullable IMinecraftServerProxy getServerProxy() {
+        return serverProxy;
+    }
+
+    public static void setServerProxy(@Nullable IMinecraftServerProxy serverProxy) {
+        MinecraftChatBridge.serverProxy = serverProxy;
     }
 }
