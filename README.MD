@@ -14,10 +14,3 @@
 您只需参考官方的 TestMinecraftBridge 进行开发即可，仅需要实现 接口`icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge` 即可
 
 您还需要在您的 插件/mod... 加载的时候调用 `MinecraftChatBridge#init`，前两个参数为配置文件，需要您根据兼容的平台不同进行配置文件加载（比如`Bukkit`上使用`SnakeYaml(BukkitConfiguration)` 进行配置文件加载）
-
-### 我想开发某聊天平台支持
-您只需参考官方的 TelegramPlatformBridge 进行开发即可，您需要实现 `icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge` 这个接口并在 resources 下放置一个叫`info`的文件
-并写入以下信息
-```properties
-mainClass=您的主类名称（即实现了 IPlatformBridge 接口的类)
-```
