@@ -26,6 +26,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
     private PlatformConfiguration config;
     private WXApiClient apiClient;
     private WXContact groupContact;
+    private String wechatFormat = "[%s] %s";
     private String playerJoinFormat = "[+] %s";
     private String playerLeaveFormat = "[-] %s";
     private String serverOnlineFormat = "[+] Server";
@@ -34,7 +35,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
     @Override
     public void send(String name, UUID playerUUID, String msg) {
         try {
-            apiClient.sendMessage("[" + name + "]: " + msg, groupContact.getUserName());
+            apiClient.sendMessage(String.format(wechatFormat, name, msg), groupContact.getUserName());
         } catch (Exception e) { MinecraftChatBridge.throwException(e, this); }
     }
 
@@ -60,6 +61,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
 
     @Override
     public void init() {
+        this.config.get("lang.wechatFormat", f -> wechatFormat = (String) f);
         this.config.get("lang.playerJoinFormat", f -> playerJoinFormat = (String) f);
         this.config.get("lang.playerLeaveFormat", f -> playerLeaveFormat = (String) f);
         this.config.get("lang.serverOnlineFormat", f -> serverOnlineFormat = (String) f);
@@ -119,9 +121,9 @@ public class WechatPlatformBridge implements IPlatformBridge {
         MinecraftEvents.onPlayerLeave.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(playerLeaveFormat, source.getName()), groupContact.getUserName()));
         MinecraftEvents.onServerSetupComplete.subscribe((source, d) ->
-                apiClient.sendMessage(String.format(serverOnlineFormat, source.getName()), groupContact.getUserName()));
+                apiClient.sendMessage(String.format(serverOnlineFormat), groupContact.getUserName()));
         MinecraftEvents.onServerBeginShutdown.subscribe((source, d) ->
-                apiClient.sendMessage(String.format(serverOfflineFormat, source.getName()), groupContact.getUserName()));
+                apiClient.sendMessage(String.format(serverOfflineFormat), groupContact.getUserName()));
 
         PlatformEvents.onPlatformBridgeLoad.trigger(this, null);
     }
