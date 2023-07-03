@@ -2,6 +2,7 @@ package icu.lama.minecraft.chatbridge.platforms.wx;
 
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
 import icu.lama.minecraft.chatbridge.core.PlatformReceiveCallback;
+import icu.lama.minecraft.chatbridge.core.binding.GeneralBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
@@ -22,6 +23,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
     @SuppressWarnings("unused")
     public static WechatPlatformBridge INSTANCE = new WechatPlatformBridge();
     private final HashMap<String, String> uidToName = new HashMap<>();
+    private final IBindingDatabase bindings = new GeneralBindingDatabase();
     private PlatformReceiveCallback callback;
     private PlatformConfiguration config;
     private WXApiClient apiClient;
@@ -130,7 +132,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
 
     @Override
     public IBindingDatabase getBindingDatabase() {
-        return null;
+        return this.bindings;
     }
 
 }
