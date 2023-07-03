@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "fabric-minecraft-bridge",
-  "version": "1.0.0",
+  "version": "1.1.0",
 
   "name": "FabricMinecraftBridge",
   "description": "A Minecraft bridge implementation. For more details please look github:Lama3L9R/MinecraftChatBridge",
@@ -22,12 +22,12 @@
       "icu.lama.minecraft.chatbridge.fabric.FabricMinecraftBridge"
     ]
   },
-  "mixins": [ ],
+  "mixins": [ "chatbridge.mixins.json" ],
 
   "depends": {
-    "fabricloader": ">=0.14.11",
+    "fabricloader": ">=0.14.21",
     "fabric-api": "*",
-    "minecraft": "~1.19.3",
+    "minecraft": "~1.20.1",
     "java": ">=17"
   },
   "suggests": { }
