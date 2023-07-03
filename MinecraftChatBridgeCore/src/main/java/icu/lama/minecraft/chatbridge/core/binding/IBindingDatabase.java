@@ -3,6 +3,7 @@ package icu.lama.minecraft.chatbridge.core.binding;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.util.UUID;
 
 public interface IBindingDatabase {
@@ -27,4 +28,10 @@ public interface IBindingDatabase {
      * @param playerUUID minecraft uuid
      */
     void update(@NotNull String name, @NotNull UUID playerUUID);
+
+    /**
+     * Save the database to disk or whatever place.
+     * May cause lag if this is called in main thread.
+     */
+    void save() throws IOException;
 }

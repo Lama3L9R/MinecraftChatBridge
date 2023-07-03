@@ -206,4 +206,8 @@ public class MinecraftChatBridge {
     public static void setServerProxy(@Nullable IMinecraftServerProxy serverProxy) {
         MinecraftChatBridge.serverProxy = serverProxy;
     }
+
+    public static ChatBridgeConfiguration getConfig() {
+        return config;
+    }
 }
