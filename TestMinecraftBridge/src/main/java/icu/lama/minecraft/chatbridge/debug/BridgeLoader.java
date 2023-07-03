@@ -1,8 +1,6 @@
 package icu.lama.minecraft.chatbridge.debug;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
 import icu.lama.minecraft.chatbridge.core.MinecraftReceiveCallback;
@@ -10,12 +8,10 @@ import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
 import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
-import icu.lama.minecraft.chatbridge.core.events.minecraft.MinecraftEvent;
 import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
 import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.util.Map;
 import java.util.Scanner;

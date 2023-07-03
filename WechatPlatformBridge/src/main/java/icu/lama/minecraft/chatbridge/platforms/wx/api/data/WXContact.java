@@ -87,6 +87,9 @@ public class WXContact{
 	@SerializedName("RemarkPYQuanPin")
 	private String remarkPYQuanPin;
 
+	/**
+	 * This is unique to all the users
+	 */
 	@SerializedName("Uin")
 	private long uin;
 

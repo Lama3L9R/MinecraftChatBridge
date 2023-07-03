@@ -44,6 +44,12 @@ public interface IProxyPlayer {
     void kick(String reason);
 
     /**
+     * Send a message to player
+     * @param msg message
+     */
+    void sendMessage(String msg);
+
+    /**
      * ALERT: THIS IS A RISKY FUNCTION AND IT MAY NOT BE IMPLEMENTED IN EVERYWHERE
      * Send a packet to the player
      * @param data packet object

@@ -117,7 +117,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
         }
 
         MinecraftEvents.onPlayerJoin.subscribe((source, d) ->
-            apiClient.sendMessage(String.format(playerJoinFormat, source.getName()), groupContact.getUserName()));
+                apiClient.sendMessage(String.format(playerJoinFormat, source.getName()), groupContact.getUserName()));
         MinecraftEvents.onPlayerLeave.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(playerLeaveFormat, source.getName()), groupContact.getUserName()));
         MinecraftEvents.onServerSetupComplete.subscribe((source, d) ->

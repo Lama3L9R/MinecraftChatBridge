@@ -34,7 +34,6 @@ public class ResponseWxInit {
     @SerializedName("MPSubscribeMsgCount")
     private Integer mPSubscribeMsgCount;
 
-    // Who the fk cares this mps shit. just lazy to generate this
     @SerializedName("MPSubscribeMsgList")
     private List<?> mPSubscribeMsgList;
     @SerializedName("ClickReportInterval")
