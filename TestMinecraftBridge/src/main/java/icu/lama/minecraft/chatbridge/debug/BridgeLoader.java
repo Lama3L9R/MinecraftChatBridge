@@ -51,8 +51,8 @@ public class BridgeLoader implements IMinecraftBridge {
         }
     }
 
-    @Override public void send(String name, UUID uuid, IPlatformBridge bridge, String msg) {
-        System.out.println("[" + uuid + "] [" + name + "] [" + bridge.getPlatformName() + "]: " + msg);
+    @Override public void send(String name, String uniqueIdentifier, UUID uuid, IPlatformBridge bridge, String msg) {
+        System.out.println("[" + uuid + "] [" + uniqueIdentifier + "] [" + name + "] [" + bridge.getPlatformName() + "]: " + msg);
     }
 
     @Override public void setReceiveCallback(MinecraftReceiveCallback callback) {

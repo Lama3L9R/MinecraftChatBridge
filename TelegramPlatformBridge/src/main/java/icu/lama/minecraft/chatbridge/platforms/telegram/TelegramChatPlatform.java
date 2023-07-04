@@ -7,6 +7,7 @@ import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
 import icu.lama.minecraft.chatbridge.core.PlatformReceiveCallback;
+import icu.lama.minecraft.chatbridge.core.binding.GeneralBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
@@ -19,6 +20,7 @@ import java.util.UUID;
 
 public class TelegramChatPlatform implements IPlatformBridge {
     public static TelegramChatPlatform INSTANCE = new TelegramChatPlatform();
+    private final IBindingDatabase database = new GeneralBindingDatabase();
 
     private PlatformReceiveCallback callback;
     private PlatformConfiguration config;
@@ -29,6 +31,11 @@ public class TelegramChatPlatform implements IPlatformBridge {
     @Override
     public void send(String name, UUID playerUUID, String msg) {
         sendRaw(name + ": " + msg);
+    }
+
+    @Override
+    public void send(String msg) {
+        sendRaw(msg);
     }
 
     private void sendRaw(String msg) {
@@ -68,7 +75,7 @@ public class TelegramChatPlatform implements IPlatformBridge {
                 Message msg = update.message();
                 if (msg == null || msg.text() == null || msg.chat().id() != chatId) { return; }
 
-                callback.onReceive(this, msg.from().username() != null ? msg.from().username() : msg.from().firstName(), msg.text());
+                callback.onReceive(this, msg.from().username() != null ? msg.from().username() : msg.from().firstName(), msg.from().id() + "", msg.text());
             });
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         });
@@ -82,6 +89,6 @@ public class TelegramChatPlatform implements IPlatformBridge {
 
     @Override
     public @Nullable IBindingDatabase getBindingDatabase() {
-        return null;
+        return database;
     }
 }

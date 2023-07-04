@@ -14,10 +14,11 @@ public interface IMinecraftBridge {
     /**
      * Send a msg to target platform
      * @param name from chat user's name (will never be player name)
+     * @param uniqueIdentifier unique identifier for chat platform user
      * @param uuid from player uuid (Will be null if player never entered server or never binds his name or binding feature is disabled)
      * @param msg message content
      */
-    void send(String name, @Nullable UUID uuid, IPlatformBridge bridge, String msg);
+    void send(String name, String uniqueIdentifier, @Nullable UUID uuid, IPlatformBridge bridge, String msg);
 
     /**
      * Set the callback that should be called by minecraft bridge when received a message.

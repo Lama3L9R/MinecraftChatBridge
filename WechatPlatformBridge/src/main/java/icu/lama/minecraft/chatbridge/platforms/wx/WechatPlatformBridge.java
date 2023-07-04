@@ -42,6 +42,13 @@ public class WechatPlatformBridge implements IPlatformBridge {
     }
 
     @Override
+    public void send(String msg) {
+        try {
+            apiClient.sendMessage(msg, groupContact.getUserName());
+        } catch (Exception e) { MinecraftChatBridge.throwException(e, this); }
+    }
+
+    @Override
     public String getPlatformName() {
         return "wechat";
     }
@@ -92,7 +99,7 @@ public class WechatPlatformBridge implements IPlatformBridge {
 
                             String[] content = it.getContent().replace("<br/>", "").split(":", 2);
 
-                            this.callback.onReceive(this, uidToName.get(content[0]), content[1]);
+                            this.callback.onReceive(this, uidToName.get(content[0]), content[0], content[1]);
                         });
             }, (e) -> MinecraftChatBridge.throwException(e, this));
 

@@ -13,6 +13,8 @@ import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import net.fabricmc.api.ModInitializer;
@@ -31,9 +33,15 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
    private final Logger LOGGER = LoggerFactory.getLogger("MinecraftChatBridge");
    private final Gson GSON = new Gson();
    private final File configFile = new File(FabricLoader.getInstance().getConfigDir().toFile(), "MinecraftChatBridge.json");
+   private final HashMap<UUID, String> bindQueue = new HashMap<>();
+   private static FabricMinecraftBridge INSTANCE;
+   private ModConfig config;
    private MinecraftReceiveCallback callback;
    private MinecraftServer serverInstance;
-   private String format = "[%s] <%s> %s";
+
+   public FabricMinecraftBridge() {
+      INSTANCE = this;
+   }
 
    @Override public void onInitialize() {
       if (!this.configFile.exists()) {
@@ -67,13 +75,7 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
          });
 
          // Load core
-         ModConfig config = this.GSON.fromJson(new FileReader(this.configFile), new TypeToken<>() {});
-         if (config.format != null && !config.format.isEmpty()) {
-            LOGGER.info("Override default format to: " + config.format);
-            this.format = config.format;
-         } else {
-            LOGGER.info("Missing format, using default one: " + format);
-         }
+         this.config = this.GSON.fromJson(new FileReader(this.configFile), new TypeToken<>() {});
 
          MinecraftChatBridge.init(config.core, config.platformConf, this, (e, source) ->
                  this.LOGGER.error("Runtime error thrown by " + source.getPlatformName(), e)
@@ -88,9 +90,28 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
       }
    }
 
-   @Override public void send(String name, @Nullable UUID uuid, IPlatformBridge bridge, String msg) {
+   @Override public void send(String name, String uniqueIdentifier, @Nullable UUID uuid, IPlatformBridge bridge, String msg) {
       if (this.serverInstance != null) {
-         this.serverInstance.getPlayerManager().broadcast(Text.of(String.format(this.format, bridge.getPlatformName(), name, msg)), false);
+         if (msg.startsWith("/bind")) {
+            var args = msg.split(" ", 2);
+            if (args.length == 2) {
+               var playerUUID = bindQueue.entrySet()
+                       .stream()
+                       .filter(it -> it.getValue().equalsIgnoreCase(args[1])).findFirst();
+               if (playerUUID.isPresent()) {
+                  if (bridge.getBindingDatabase() != null) {
+                     bridge.getBindingDatabase().update(uniqueIdentifier, playerUUID.get().getKey());
+                     this.config.formats.bindSuccess.forEach(it -> {
+                        bridge.send(String.format(it, bridge.getPlatformName()));
+                     });
+                  }
+               }
+            }
+         }
+
+         config.formats.messageFormat.forEach(it ->
+                 this.serverInstance.getPlayerManager().broadcast(Text.of(String.format(it, bridge.getPlatformName(), name, msg)), false)
+         );
       }
    }
 
@@ -98,10 +119,24 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
       this.callback = callback;
    }
 
-   public class ModConfig {
-      public ChatBridgeConfiguration core;
-      public Map<String, PlatformConfiguration> platformConf;
-      public String format;
+   public ModConfig getConfig() {
+      return config;
+   }
+
+   /**
+    * Add a uuid to bind queue
+    * @param uuid player uuid
+    * @return bind key
+    */
+   public String addBindQueue(UUID uuid) {
+      var key = UUID.randomUUID().toString();
+      bindQueue.put(uuid, key);
+
+      return key;
+   }
+
+   public static FabricMinecraftBridge getInstance() {
+      return INSTANCE;
    }
 
 }

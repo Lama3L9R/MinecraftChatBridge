@@ -33,6 +33,12 @@ public interface IPlatformBridge {
     public void send(String name, UUID playerUUID, String msg);
 
     /**
+     * Send a message to target platform but without any format
+     * @param msg message
+     */
+    public void send(String msg);
+
+    /**
      * get this platform registry name
      * @return platform name
      */

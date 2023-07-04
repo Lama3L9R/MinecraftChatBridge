@@ -35,12 +35,12 @@ public class MinecraftChatBridge {
         exception.printStackTrace();
     };
 
-    private static final PlatformReceiveCallback platformReceiveCallback = (platform, name, msg) -> {
+    private static final PlatformReceiveCallback platformReceiveCallback = (platform, name, identifier, msg) -> {
         UUID uuid = null;
         if (platform.getBindingDatabase() != null) {
             uuid = platform.getBindingDatabase().getBinding(name);
         }
-        minecraftBridge.send(name, uuid, platform, msg);
+        minecraftBridge.send(name, identifier, uuid, platform, msg);
     };
 
     public static final MinecraftReceiveCallback minecraftReceiveCallback = (name, uuid, msg) -> platforms.forEach((pName, platform) -> {
