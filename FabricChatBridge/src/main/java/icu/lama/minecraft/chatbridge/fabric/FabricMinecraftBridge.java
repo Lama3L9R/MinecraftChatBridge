@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import icu.lama.minecraft.chatbridge.fabric.command.BindCommand;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
@@ -62,6 +64,14 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
 
          ServerLifecycleEvents.SERVER_STOPPING.register((server) -> {
             MinecraftEvents.onServerBeginShutdown.trigger(null, null);
+
+            MinecraftChatBridge.getPlatforms().values().stream().filter(it -> it.getBindingDatabase() != null).forEach(it -> {
+               try {
+                  it.getBindingDatabase().save();
+               } catch (IOException e) {
+                  throw new RuntimeException(e);
+               }
+            });
          });
 
          ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
@@ -85,6 +95,8 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
          ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
                  this.callback.onReceive(sender.getName().getString(), sender.getUuid(), message.getSignedContent())
          );
+
+         BindCommand.getInstance().register();
       } catch (Exception e) {
          throw new RuntimeException(e);
       }
@@ -107,11 +119,12 @@ public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
                   }
                }
             }
+         } else {
+            config.formats.messageFormat.forEach(it ->
+               this.serverInstance.getPlayerManager().broadcast(Text.of(String.format(it, bridge.getPlatformName(), name, msg)), false)
+            );
          }
 
-         config.formats.messageFormat.forEach(it ->
-                 this.serverInstance.getPlayerManager().broadcast(Text.of(String.format(it, bridge.getPlatformName(), name, msg)), false)
-         );
       }
    }
 

@@ -27,8 +27,9 @@ dependencies {
     include project(":MinecraftChatBridgeCore")
     implementation project(':MinecraftChatBridgeCore')
 
-    modApi include("maven.modrinth:easyauth:3.0.0-17")
-    modLocalRuntime "maven.modrinth:easyauth:3.0.0-17"
+    modCompileOnlyApi include("maven.modrinth:easyauth:3.0.0-17")
+
+    // modLocalRuntime "maven.modrinth:easyauth:3.0.0-17"
 }
 
 processResources {

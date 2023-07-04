@@ -8,6 +8,7 @@ import net.minecraft.text.*;
 import static net.minecraft.server.command.CommandManager.*;
 
 public class BindCommand {
+    private static final BindCommand INSTANCE = new BindCommand();
     public void register() {
         CommandRegistrationCallback.EVENT.register(((dispatcher, registryAccess, environment) -> dispatcher.register(
             literal("bind").executes(ctx -> {
@@ -16,11 +17,10 @@ public class BindCommand {
 
                 var button = Text
                         .literal(FabricMinecraftBridge.getInstance().getConfig().formats.bindHintButtonStyle)
-                        .setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, "")))
-                        ;
+                        .setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, "/bind " + key)));
 
                 FabricMinecraftBridge.getInstance().getConfig().formats.bindHint.forEach(it -> {
-                    var chunks = it.split("<ButtonPlaceholder>", 2);
+                    var chunks = String.format(it, key).split("<ButtonPlaceholder>", 2);
                     if (chunks.length == 1) {
                         player.sendMessage(Text.of(chunks[0]));
                     } else {
@@ -31,5 +31,9 @@ public class BindCommand {
                 return 1;
             }
         ))));
+    }
+
+    public static BindCommand getInstance() {
+        return INSTANCE;
     }
 }

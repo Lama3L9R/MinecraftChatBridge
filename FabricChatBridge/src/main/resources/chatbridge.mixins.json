@@ -3,11 +3,11 @@
   "package": "icu.lama.minecraft.chatbridge.fabric.mixin",
   "compatibilityLevel": "JAVA_11",
   "mixins": [
-    "RegisterCommandMixin"
+    "RegisterCommandMixin",
+    "ServerPlayerEntityMixinMixin"
   ],
   "minVersion": "0.8",
   "injectors": {
     "defaultRequire": 1
-  },
-  "plugin": "icu.lama.minecraft.chatbridge.fabric.mixin.BridgeMixinManager"
+  }
 }

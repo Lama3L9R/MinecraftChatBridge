@@ -7,6 +7,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -16,9 +17,12 @@ import java.util.UUID;
 
 
 @Mixin(targets = "xyz.nikitacartes.easyauth.commands.RegisterCommand")
-public class RegisterCommandMixin implements OptionalMixin {
+@Pseudo
+public class RegisterCommandMixin {
     @Inject(method = "register", at = @At(value = "HEAD"), cancellable = true)
     private static void injectCommandHandler(ServerCommandSource source, String pass1, String pass2, CallbackInfoReturnable<Integer> cir) throws Throwable {
+        System.out.println("Mixin working...");
+
         ServerPlayerEntity p = source.getPlayerOrThrow();
         UUID playerFakeUUID = UUIDHelper.getFakeUUID(p);
         var notBinded = MinecraftChatBridge
