@@ -12,9 +12,8 @@ pluginManagement {
 
 rootProject.name = 'MinecraftChatBridge'
 include 'MinecraftChatBridgeCore'
-include 'TelegramPlatformBridge'
-include 'TestMinecraftBridge'
-include 'WechatPlatformBridge'
-include 'FabricChatBridge'
-include 'FabricChatBridge'
+// include 'TelegramPlatformBridge'
+// include 'TestMinecraftBridge'
+// include 'WechatPlatformBridge'
+// include 'FabricChatBridge'
 

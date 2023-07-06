@@ -5,6 +5,8 @@ import icu.lama.minecraft.chatbridge.fabric.utils.UUIDHelper;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.text.*;
 
+import javax.swing.*;
+
 import static net.minecraft.server.command.CommandManager.*;
 
 public class BindCommand {
@@ -18,7 +20,6 @@ public class BindCommand {
                 var button = Text
                         .literal(FabricMinecraftBridge.getInstance().getConfig().formats.bindHintButtonStyle)
                         .setStyle(Style.EMPTY.withClickEvent(new ClickEvent(ClickEvent.Action.COPY_TO_CLIPBOARD, "/bind " + key)));
-
                 FabricMinecraftBridge.getInstance().getConfig().formats.bindHint.forEach(it -> {
                     var chunks = String.format(it, key).split("<ButtonPlaceholder>", 2);
                     if (chunks.length == 1) {

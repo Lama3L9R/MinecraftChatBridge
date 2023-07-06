@@ -1,4 +1,4 @@
-package icu.lama.minecraft.chatbridge.core.events;
+package icu.lama.minecraft.chatbridge.core.events.manager;
 
 import java.util.ArrayList;
 import java.util.List;

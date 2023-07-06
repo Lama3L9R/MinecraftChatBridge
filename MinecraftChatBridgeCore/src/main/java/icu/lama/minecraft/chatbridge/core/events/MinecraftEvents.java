@@ -8,6 +8,9 @@ public class MinecraftEvents {
      * The event arg will be the instance of MinecraftServer and the source is null
      */
     public static MinecraftEvent<Object> onServerSetupComplete = new MinecraftEvent<>();
+
+    public static MinecraftEvent<EventMinecraftChatMessage> onChatMessage = new MinecraftEvent<>();
+
     /**
      * Event source will be null
      */

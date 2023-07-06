@@ -1,156 +1,81 @@
 package icu.lama.minecraft.chatbridge.core;
 
-import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
-import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
-import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
-import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
-import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
-import icu.lama.minecraft.chatbridge.core.proxy.IMinecraftServerProxy;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigRenderOptions;
+import icu.lama.minecraft.chatbridge.core.loader.*;
+import icu.lama.minecraft.chatbridge.core.proxy.minecraft.IMinecraftServerProxy;
+import icu.lama.minecraft.chatbridge.core.proxy.platform.IPlatformProxy;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.MalformedURLException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
-import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 public class MinecraftChatBridge {
-    private static ChatBridgeConfiguration config;
+    private static final Map<String, IPlatformProxy> platforms = new HashMap<>();
+    private static final HashMap<String, BridgePlugin> loadedPlugins = new HashMap<>();
+    private static final HashMap<String, ClassLoader> classLoaders = new HashMap<>();
+    private static Config config; // volatile + sync lock
+    private static IMinecraftServerProxy minecraft;
 
-    private static ClassLoader classLoader;
+    private static ErrorCallback onError;
 
-    private static final Map<String, IPlatformBridge> platforms = new HashMap<>();
-
-    private static IMinecraftBridge minecraftBridge;
-
-    private static @Nullable IMinecraftServerProxy serverProxy = null;
-
-    private static ErrorCallback onError = (exception, source) -> {
-        System.err.println("A runtime error was found on " + source.getPlatformName());
-        exception.printStackTrace();
-    };
-
-    private static final PlatformReceiveCallback platformReceiveCallback = (platform, name, identifier, msg) -> {
-        UUID uuid = null;
-        if (platform.getBindingDatabase() != null) {
-            uuid = platform.getBindingDatabase().getBinding(name);
-        }
-        minecraftBridge.send(name, identifier, uuid, platform, msg);
-    };
-
-    public static final MinecraftReceiveCallback minecraftReceiveCallback = (name, uuid, msg) -> platforms.forEach((pName, platform) -> {
-        IBindingDatabase database = platform.getBindingDatabase();
-        String bName = name;
-        if (database != null) {
-            bName = database.getName(uuid);
-        }
-
-        platform.send(bName, uuid, msg);
-    });
-
-    /**
-     * Init minecraft chat bridge.
-     *
-     * @param coreConf chat bridge configurations
-     * @param platformConf platform configurations
-     * @param bridge minecraft bridge instance (aka this method caller)
-     */
-    public static void init(@NotNull ChatBridgeConfiguration coreConf,
-                            @NotNull Map<String, PlatformConfiguration> platformConf,
-                            @NotNull IMinecraftBridge bridge) throws Exception {
-        init(coreConf, platformConf, bridge, (err, source) -> { });
+    public static void init(@NotNull File dataFolder, @NotNull IMinecraftServerProxy minecraft) throws Throwable {
+        init(dataFolder, minecraft, (exception, source) -> {
+            System.err.println("A runtime error was found on " + source.getPlatformName());
+            exception.printStackTrace();
+        });
     }
 
-    /**
-     * Init minecraft chat bridge.
-     *
-     * @param coreConf chat bridge configurations
-     * @param platformConf platform configurations
-     * @param bridge minecraft bridge instance (aka this method caller)
-     * @param errorHandler invoke this callback whenever there is a caught error
-     */
-    public static void init(@NotNull ChatBridgeConfiguration coreConf,
-                            @NotNull Map<String, PlatformConfiguration> platformConf,
-                            @NotNull IMinecraftBridge bridge,
-                            @NotNull ErrorCallback errorHandler) throws Exception {
-        Objects.requireNonNull(coreConf);
-        Objects.requireNonNull(platformConf);
-        Objects.requireNonNull(bridge);
-        Objects.requireNonNull(errorHandler);
+    public static void init(@NotNull File dataFolder,
+                            @NotNull IMinecraftServerProxy minecraft,
+                            @NotNull ErrorCallback errorHandler) throws Throwable {
 
         onError = errorHandler;
-        config = coreConf;
-        minecraftBridge = bridge;
-        bridge.setReceiveCallback(minecraftReceiveCallback);
 
-        File platformDirectory = new File(config.bridgeDirectory);
-        if (!platformDirectory.exists()) {
-            platformDirectory.mkdir();
+        if (!dataFolder.exists()) {
+            if (dataFolder.mkdir()) {
+                throw new RuntimeException("Failed to create directory: " + dataFolder.getAbsolutePath());
+            }
         }
 
-        List<URL> listURLs =Arrays.stream(platformDirectory.listFiles(file -> file.getName().endsWith(".jar")))
-                .map(File::toURI)
-                .map(uri -> {
-                    try { return uri.toURL(); } catch (MalformedURLException e) { throw new RuntimeException(e); }
-                })
-                .collect(Collectors.toList());
+        var configFile = new File(dataFolder, "core.conf");
+        if (!configFile.exists()) {
+            saveConfig(configFile);
+        }
 
-        URL[] urls = listURLs.toArray(new URL[0]);
+        var userConfig = ConfigFactory.parseFile(configFile);
+        config = userConfig.withFallback(config);
 
-        classLoader = new URLClassLoader(urls, Thread.currentThread().getContextClassLoader());
-
-        listURLs.forEach((url) -> {
-            JarFile jar = null;
-            try {
-                jar = new JarFile(url.getFile());
-                Properties prop = new Properties();
-                prop.load(jar.getInputStream(jar.getEntry("info")));
-
-                String mainClassName = prop.getProperty("mainClass");
-
-                if ("manual".equalsIgnoreCase(mainClassName)) {
-                    return;
-                }
-
-                Class<IPlatformBridge> mainClass = (Class<IPlatformBridge>) classLoader.loadClass(mainClassName);
-                Field instanceField = mainClass.getDeclaredField("INSTANCE");
-                IPlatformBridge instance = (IPlatformBridge) instanceField.get(null);
-
-                register(instance, instance.getPlatformName());
-            } catch (IOException | NoSuchFieldException | ClassNotFoundException | IllegalAccessException | ClassCastException e) {
-                throw new RuntimeException(e);
-            } finally {
-                if (jar != null) {
-                    try {
-                        jar.close();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
+        var platformDirectory = new File(dataFolder, "plugins");
+        if (!platformDirectory.exists()) {
+            if (platformDirectory.mkdir()) {
+                throw new RuntimeException("Failed to create directory: " + platformDirectory.getAbsolutePath());
             }
-        } );
+        }
 
-        platformConf.forEach((pName, pConf) -> {
-            IPlatformBridge instance = getPlatform(pName);
-            if (instance == null) {
-                return;
+        // Stream API is async so for thread safe I have to avoid use it.
+        // Arrays.stream(platformDirectory.listFiles())
+        //         .filter(it -> it.getName().endsWith(".jar"))
+        //         .forEach(MinecraftChatBridge::loadPlugin);
+
+        for (var it : platformDirectory.listFiles()) {
+            if (it.getName().endsWith(".jar")) {
+                loadPlugin(it); // Sync, Slower but thread safe
             }
+        }
 
-            pConf.mainClass = instance.getClass().getName();
-
-            instance.setConfiguration(pConf);
-            instance.setReceiveCallback(platformReceiveCallback);
-
-            try {
-                instance.init();
-            } catch (Throwable exception) {
-                throwException(exception, instance);
-            }
+        loadedPlugins.values().forEach(it -> {
+            it.getInitializers().forEach(InstanceBoundCall::call);
         });
     }
 
@@ -159,23 +84,15 @@ public class MinecraftChatBridge {
      * @param instance bridge instance
      * @param name name
      */
-    public static void register(IPlatformBridge instance, String name) {
+    public static void register(IPlatformProxy instance, String name) {
         platforms.put(name, instance);
-    }
-
-    /**
-     * Get platform bridge class loader
-     * @return platform bridge class loader
-     */
-    public static ClassLoader getClassLoader() {
-        return classLoader;
     }
 
     /**
      * Get all platforms with name
      * @return all platforms with name
      */
-    public static Map<String, IPlatformBridge> getPlatforms() {
+    public static Map<String, IPlatformProxy> getPlatforms() {
         return platforms;
     }
 
@@ -184,7 +101,7 @@ public class MinecraftChatBridge {
      * @param name platform name
      * @return platform instance
      */
-    public static @Nullable IPlatformBridge getPlatform(String name) {
+    public static @Nullable IPlatformProxy getPlatform(String name) {
         return platforms.get(name);
     }
 
@@ -193,21 +110,130 @@ public class MinecraftChatBridge {
      * @param e exception
      * @param source exception source
      */
-    public static void throwException(Throwable e, @NotNull IPlatformBridge source) {
+    public static void throwException(Throwable e, @NotNull IPlatformProxy source) {
         Objects.requireNonNull(source);
 
         onError.onError(e, source);
     }
 
-    public static @Nullable IMinecraftServerProxy getServerProxy() {
-        return serverProxy;
+
+    public static BridgePlugin loadPlugin(File file) {
+        if (file.getName().endsWith(".jar")) {
+            try { // TODO Migrate to custom classloader: ClassLoaderEx to improve performance
+                var cl = new URLClassLoader(new URL[] { file.toURI().toURL() });
+
+                Field classesField = ClassLoader.class.getDeclaredField("classes");
+                classesField.setAccessible(true);
+
+                Vector<Class<?>> classes =  (Vector<Class<?>>) classesField.get(Thread.currentThread().getContextClassLoader());
+                var namedClasses = new HashMap<String, Class<?>>();
+                classes.forEach(it -> namedClasses.put(it.getName(), it));
+
+                String name = Math.random() + System.currentTimeMillis() + "UNNAMED";
+                List<InstanceBoundCall> initializers = new ArrayList<>();
+                List<IPlatformProxy> pluginPlatforms = new ArrayList<>();
+
+                for (var it : classes) { // Autoload @Platform and @Initializer
+                    Plugin platformMarker = (Plugin) it.getAnnotation(Plugin.class);
+                    if (platformMarker != null) {
+                        name = platformMarker.name();
+                        IPlatformProxy instance;
+
+                        try { // Load / Create instance
+                            var instanceField = Arrays.stream(it.getDeclaredFields()).filter(f -> "INSTANCE".equalsIgnoreCase(f.getName())).findFirst();
+                            if (instanceField.isPresent()) {
+                                if ((instanceField.get().getModifiers() & Modifier.STATIC) != 0 &&
+                                        (instanceField.get().getModifiers() & Modifier.PUBLIC) != 0) {
+                                    instance = (IPlatformProxy) instanceField.get().get(null);
+                                } else {
+                                    throw new RuntimeException("Illegal INSTANCE Field! It must be public and static");
+                                }
+                            } else {
+                                var constructor = Arrays.stream(it.getConstructors()).filter(c -> c.getParameterCount() == 0).findFirst();
+                                if (constructor.isPresent()) {
+                                    instance = (IPlatformProxy) constructor.get().newInstance();
+                                } else {
+                                    throw  new RuntimeException("No idea how to construct your class! Please consider add a instance field (public static) named INSTANCE.");
+                                }
+                            }
+                        } catch (ClassCastException ex) {
+                            throw new RuntimeException("Illegal platform marker on " + it.getName() + ". Marker can only mark IPlatformProxy", ex);
+                        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        if (platformMarker.type() == PluginType.PLATFORM_PROXY) {
+                            pluginPlatforms.add(instance);
+                            platforms.put(instance.getPlatformName(), instance);
+                        }
+
+                        initializers.addAll(Arrays.stream(it.getDeclaredMethods())
+                                .filter(m -> m.getAnnotation(Initializer.class) != null)
+                                .map(m -> new InstanceBoundCall(m, instance))
+                                .collect(Collectors.toList())
+                        );
+                    }
+
+
+                }
+
+                var plugin = new BridgePlugin(cl, namedClasses, name, file, pluginPlatforms, initializers);
+
+                loadedPlugins.put(name, plugin);
+                classLoaders.put(name, cl);
+
+                return plugin;
+            } catch (IOException | IllegalAccessException | NoSuchFieldException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return null;
     }
 
-    public static void setServerProxy(@Nullable IMinecraftServerProxy serverProxy) {
-        MinecraftChatBridge.serverProxy = serverProxy;
+    public static void unloadPlugin(String identifier) {
+        loadedPlugins.remove(identifier);
+        classLoaders.remove(identifier);
     }
 
-    public static ChatBridgeConfiguration getConfig() {
+    public static void unloadPlugin(BridgePlugin plugin) {
+        loadedPlugins.remove(plugin.getIdentifier());
+        classLoaders.remove(plugin.getIdentifier());
+    }
+
+    public static Collection<BridgePlugin> getLoadedPlugins() {
+        return loadedPlugins.values();
+    }
+
+    public static BridgePlugin getPlugin(String identifier) {
+        return loadedPlugins.get(identifier);
+    }
+
+    public static Config getConfig() {
         return config;
+    }
+
+    public static void updateConfig(Config config) {
+        MinecraftChatBridge.config = config;
+    }
+
+    public static void saveConfig(File configFile) {
+        if (!configFile.exists()) {
+            try {
+                if (configFile.createNewFile()) {
+                    throw new RuntimeException("Failed to create config file!");
+                }
+
+                var fw = new FileWriter(configFile);
+                fw.write(config.root().render(ConfigRenderOptions
+                        .defaults()
+                        .setJson(false)
+                        .setComments(true)
+                        .setFormatted(true)));
+                fw.flush();
+                fw.close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 }

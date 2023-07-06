@@ -1,5 +1,7 @@
-package icu.lama.minecraft.chatbridge.core.proxy;
+package icu.lama.minecraft.chatbridge.core.proxy.minecraft;
 
+import icu.lama.minecraft.chatbridge.core.proxy.IProxy;
+import icu.lama.minecraft.chatbridge.core.proxy.Risky;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -11,7 +13,7 @@ import java.util.UUID;
  * This class will have different implementation in different MinecraftServer Implementation
  * So you should avoid using any server-specified api
  */
-public interface IMinecraftServerProxy {
+public interface IMinecraftServerProxy extends IProxy {
     /**
      * Get all online players
      * @return list of minecraft player instance
@@ -42,7 +44,7 @@ public interface IMinecraftServerProxy {
      * Get the type of the server
      * @return type of the server
      */
-    MinecraftServerType getServerType();
+    ServerType getServerType();
 
     /**
      * Broadcast message to server
@@ -65,10 +67,4 @@ public interface IMinecraftServerProxy {
      * @throws UnsupportedOperationException May throw in some implementation of MinecraftServer
      */
     @Risky void broadcastPacket(byte[] data);
-
-    /**
-     * Get the original Minecraft Server Instance
-     * @return instance of Minecraft Server
-     */
-    Object unwrap();
 }

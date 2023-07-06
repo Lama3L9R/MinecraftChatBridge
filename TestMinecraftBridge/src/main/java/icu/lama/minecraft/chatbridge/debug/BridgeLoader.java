@@ -3,7 +3,6 @@ package icu.lama.minecraft.chatbridge.debug;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
-import icu.lama.minecraft.chatbridge.core.MinecraftReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;

@@ -1,6 +1,9 @@
-package icu.lama.minecraft.chatbridge.core.proxy;
+package icu.lama.minecraft.chatbridge.core.proxy.minecraft;
 
-public interface IProxyWorld {
+import icu.lama.minecraft.chatbridge.core.proxy.IProxy;
+import icu.lama.minecraft.chatbridge.core.proxy.Risky;
+
+public interface IProxyWorld extends IProxy {
     /**
      * Get world type. It may be 'overworld', 'nether', 'the_end' or any other types that is added by mods.
      * @return world type

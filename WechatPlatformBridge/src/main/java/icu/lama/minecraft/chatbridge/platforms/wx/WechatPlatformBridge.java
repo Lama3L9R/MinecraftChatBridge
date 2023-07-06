@@ -1,7 +1,6 @@
 package icu.lama.minecraft.chatbridge.platforms.wx;
 
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
-import icu.lama.minecraft.chatbridge.core.PlatformReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.binding.GeneralBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;

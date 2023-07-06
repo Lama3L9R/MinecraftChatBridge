@@ -15,4 +15,5 @@ repositories {
 
 dependencies {
     implementation 'org.jetbrains:annotations:23.0.0'
+    implementation 'com.typesafe:config:1.4.2'
 }

@@ -1,5 +1,9 @@
-package icu.lama.minecraft.chatbridge.core.proxy;
+package icu.lama.minecraft.chatbridge.core.proxy.minecraft;
 
+import icu.lama.minecraft.chatbridge.core.proxy.IProxy;
+import icu.lama.minecraft.chatbridge.core.proxy.Risky;
+
+import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -7,7 +11,7 @@ import java.util.UUID;
  * This class will have different implementation in different MinecraftServer Implementation
  * So you should avoid using any server-specified api
  */
-public interface IProxyPlayer {
+public interface IProxyPlayer extends IProxy {
     /**
      * Gets the uuid of the player
      * @return uuid of the player
@@ -43,6 +47,8 @@ public interface IProxyPlayer {
      */
     void kick(String reason);
 
+    void ban(Date till, String reason1, String reason2);
+
     /**
      * Send a message to player
      * @param msg message
@@ -55,7 +61,8 @@ public interface IProxyPlayer {
      * @param data packet object
      * @throws UnsupportedOperationException May throw in some implementation of MinecraftServer
      */
-    @Risky void sendPacket(Object data);
+    @Risky
+    void sendPacket(Object data);
 
     /**
      * ALERT: THIS IS A RISKY FUNCTION AND IT MAY NOT BE IMPLEMENTED IN EVERYWHERE

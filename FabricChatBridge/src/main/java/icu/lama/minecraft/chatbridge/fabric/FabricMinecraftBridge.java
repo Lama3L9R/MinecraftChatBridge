@@ -3,9 +3,6 @@ package icu.lama.minecraft.chatbridge.fabric;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
-import icu.lama.minecraft.chatbridge.core.MinecraftReceiveCallback;
-import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
-import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
 import icu.lama.minecraft.chatbridge.core.events.minecraft.MinecraftEventSource;
 import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
@@ -14,8 +11,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import icu.lama.minecraft.chatbridge.fabric.command.BindCommand;

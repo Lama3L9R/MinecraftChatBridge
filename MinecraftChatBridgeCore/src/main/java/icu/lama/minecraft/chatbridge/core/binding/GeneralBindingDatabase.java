@@ -14,8 +14,8 @@ public class GeneralBindingDatabase implements IBindingDatabase {
     private final Map<UUID, String> reverseMap = new HashMap<>();
 
 
-    public GeneralBindingDatabase() {
-        var dataFolder = new File(MinecraftChatBridge.getConfig().dataStore);
+    public GeneralBindingDatabase() { // TODO FIX HERE
+        var dataFolder = new File(""); //new File(MinecraftChatBridge.getConfig().dataStore);
         if (!dataFolder.exists()) {
             dataFolder.mkdir();
         }
@@ -61,8 +61,8 @@ public class GeneralBindingDatabase implements IBindingDatabase {
     }
 
     @Override
-    public void save() throws IOException {
-        var dataFolder = new File(MinecraftChatBridge.getConfig().dataStore);
+    public void save() throws IOException { //TODO FIX HERE
+        var dataFolder = new File(""); //new File(MinecraftChatBridge.getConfig().dataStore);
         if (!dataFolder.exists()) {
             dataFolder.mkdir();
         }

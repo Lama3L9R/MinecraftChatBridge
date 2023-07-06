@@ -1,4 +1,4 @@
-package icu.lama.minecraft.chatbridge.core.proxy;
+package icu.lama.minecraft.chatbridge.core.proxy.minecraft;
 
 public class ProxyWorldType {
     public static final ProxyWorldType OVERWORLD = new ProxyWorldType("overworld");

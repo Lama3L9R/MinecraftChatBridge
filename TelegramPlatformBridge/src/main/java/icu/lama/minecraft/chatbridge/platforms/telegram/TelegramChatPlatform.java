@@ -6,7 +6,6 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
-import icu.lama.minecraft.chatbridge.core.PlatformReceiveCallback;
 import icu.lama.minecraft.chatbridge.core.binding.GeneralBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
 import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
