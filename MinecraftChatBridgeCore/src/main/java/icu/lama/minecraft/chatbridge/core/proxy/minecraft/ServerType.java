@@ -34,5 +34,6 @@ public enum ServerType {
      * Minecraft proxy server
      * BungeeCord, Waterfall etc.
      */
-    PROXY
+    PROXY,
+    OTHER
 }

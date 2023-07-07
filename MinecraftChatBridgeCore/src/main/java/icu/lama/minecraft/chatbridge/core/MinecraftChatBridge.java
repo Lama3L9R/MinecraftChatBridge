@@ -4,6 +4,12 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import icu.lama.minecraft.chatbridge.core.loader.*;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.ConfigInject;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Initializer;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Plugin;
+import icu.lama.minecraft.chatbridge.core.loader.reflection.ClassLoaderEx;
+import icu.lama.minecraft.chatbridge.core.loader.reflection.InstanceBoundCall;
+import icu.lama.minecraft.chatbridge.core.loader.reflection.InstanceBoundGet;
 import icu.lama.minecraft.chatbridge.core.proxy.minecraft.IMinecraftServerProxy;
 import icu.lama.minecraft.chatbridge.core.proxy.platform.IPlatformProxy;
 import org.jetbrains.annotations.NotNull;
@@ -19,6 +25,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class MinecraftChatBridge {
     private static final Map<String, IPlatformProxy> platforms = new HashMap<>();
@@ -43,7 +50,7 @@ public class MinecraftChatBridge {
         onError = errorHandler;
 
         if (!dataFolder.exists()) {
-            if (dataFolder.mkdir()) {
+            if (!dataFolder.mkdir()) {
                 throw new RuntimeException("Failed to create directory: " + dataFolder.getAbsolutePath());
             }
         }
@@ -54,11 +61,11 @@ public class MinecraftChatBridge {
         }
 
         var userConfig = ConfigFactory.parseFile(configFile);
-        config = userConfig.withFallback(config);
+        config = config != null ? userConfig.withFallback(config) : userConfig;
 
         var platformDirectory = new File(dataFolder, "plugins");
         if (!platformDirectory.exists()) {
-            if (platformDirectory.mkdir()) {
+            if (!platformDirectory.mkdir()) {
                 throw new RuntimeException("Failed to create directory: " + platformDirectory.getAbsolutePath());
             }
         }
@@ -73,6 +80,8 @@ public class MinecraftChatBridge {
                 loadPlugin(it); // Sync, Slower but thread safe
             }
         }
+
+        saveConfig(configFile);
 
         loadedPlugins.values().forEach(it -> {
             it.getInitializers().forEach(InstanceBoundCall::call);
@@ -120,75 +129,20 @@ public class MinecraftChatBridge {
     public static BridgePlugin loadPlugin(File file) {
         if (file.getName().endsWith(".jar")) {
             try { // TODO Migrate to custom classloader: ClassLoaderEx to improve performance
-                var cl = new URLClassLoader(new URL[] { file.toURI().toURL() });
+                var cl = new ClassLoaderEx(MinecraftChatBridge.class.getClassLoader(), file);
+                cl.initPlugin();
 
-                Field classesField = ClassLoader.class.getDeclaredField("classes");
-                classesField.setAccessible(true);
+                loadedPlugins.put(cl.getName(), cl.getPlugin());
+                classLoaders.put(cl.getName(), cl);
 
-                Vector<Class<?>> classes =  (Vector<Class<?>>) classesField.get(Thread.currentThread().getContextClassLoader());
-                var namedClasses = new HashMap<String, Class<?>>();
-                classes.forEach(it -> namedClasses.put(it.getName(), it));
-
-                String name = Math.random() + System.currentTimeMillis() + "UNNAMED";
-                List<InstanceBoundCall> initializers = new ArrayList<>();
-                List<IPlatformProxy> pluginPlatforms = new ArrayList<>();
-
-                for (var it : classes) { // Autoload @Platform and @Initializer
-                    Plugin platformMarker = (Plugin) it.getAnnotation(Plugin.class);
-                    if (platformMarker != null) {
-                        name = platformMarker.name();
-                        IPlatformProxy instance;
-
-                        try { // Load / Create instance
-                            var instanceField = Arrays.stream(it.getDeclaredFields()).filter(f -> "INSTANCE".equalsIgnoreCase(f.getName())).findFirst();
-                            if (instanceField.isPresent()) {
-                                if ((instanceField.get().getModifiers() & Modifier.STATIC) != 0 &&
-                                        (instanceField.get().getModifiers() & Modifier.PUBLIC) != 0) {
-                                    instance = (IPlatformProxy) instanceField.get().get(null);
-                                } else {
-                                    throw new RuntimeException("Illegal INSTANCE Field! It must be public and static");
-                                }
-                            } else {
-                                var constructor = Arrays.stream(it.getConstructors()).filter(c -> c.getParameterCount() == 0).findFirst();
-                                if (constructor.isPresent()) {
-                                    instance = (IPlatformProxy) constructor.get().newInstance();
-                                } else {
-                                    throw  new RuntimeException("No idea how to construct your class! Please consider add a instance field (public static) named INSTANCE.");
-                                }
-                            }
-                        } catch (ClassCastException ex) {
-                            throw new RuntimeException("Illegal platform marker on " + it.getName() + ". Marker can only mark IPlatformProxy", ex);
-                        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
-                            throw new RuntimeException(e);
-                        }
-
-                        if (platformMarker.type() == PluginType.PLATFORM_PROXY) {
-                            pluginPlatforms.add(instance);
-                            platforms.put(instance.getPlatformName(), instance);
-                        }
-
-                        initializers.addAll(Arrays.stream(it.getDeclaredMethods())
-                                .filter(m -> m.getAnnotation(Initializer.class) != null)
-                                .map(m -> new InstanceBoundCall(m, instance))
-                                .collect(Collectors.toList())
-                        );
-                    }
-
-
-                }
-
-                var plugin = new BridgePlugin(cl, namedClasses, name, file, pluginPlatforms, initializers);
-
-                loadedPlugins.put(name, plugin);
-                classLoaders.put(name, cl);
-
-                return plugin;
-            } catch (IOException | IllegalAccessException | NoSuchFieldException e) {
+                return cl.getPlugin();
+            } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }
         return null;
     }
+
 
     public static void unloadPlugin(String identifier) {
         loadedPlugins.remove(identifier);
@@ -217,23 +171,24 @@ public class MinecraftChatBridge {
     }
 
     public static void saveConfig(File configFile) {
-        if (!configFile.exists()) {
-            try {
+        try {
+            if (!configFile.exists()) {
                 if (configFile.createNewFile()) {
                     throw new RuntimeException("Failed to create config file!");
                 }
-
-                var fw = new FileWriter(configFile);
-                fw.write(config.root().render(ConfigRenderOptions
-                        .defaults()
-                        .setJson(false)
-                        .setComments(true)
-                        .setFormatted(true)));
-                fw.flush();
-                fw.close();
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
             }
+
+            var fw = new FileWriter(configFile);
+            fw.write(config.root().render(ConfigRenderOptions
+                    .defaults()
+                    .setJson(false)
+                    .setOriginComments(false)
+                    .setComments(false)
+                    .setFormatted(true)));
+            fw.flush();
+            fw.close();
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
         }
     }
 }

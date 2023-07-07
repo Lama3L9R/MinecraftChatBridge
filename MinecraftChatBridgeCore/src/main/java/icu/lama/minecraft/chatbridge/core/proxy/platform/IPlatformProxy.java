@@ -23,7 +23,5 @@ public interface IPlatformProxy extends IProxy {
 
     void sendMessage(String uniqueIdentifier, String msg);
 
-    void getCommandManager();
-
     Object unwrap();
 }

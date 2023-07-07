@@ -34,7 +34,7 @@ public interface IProxyPlayer extends IProxy {
      * Get the type of the world where the player is standing
      * @return the type of the world where the player is standing
      */
-    String getCurrentWorldType();
+    Location getStandingLocation();
 
     /**
      * Kick out the player

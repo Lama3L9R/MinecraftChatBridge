@@ -1,6 +1,5 @@
-package icu.lama.minecraft.chatbridge.core.loader;
+package icu.lama.minecraft.chatbridge.core.loader.reflection;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class InstanceBoundCall {

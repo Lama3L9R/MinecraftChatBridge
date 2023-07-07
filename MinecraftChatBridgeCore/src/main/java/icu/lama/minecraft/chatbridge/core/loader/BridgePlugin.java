@@ -3,6 +3,8 @@ package icu.lama.minecraft.chatbridge.core.loader;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
+import icu.lama.minecraft.chatbridge.core.loader.reflection.ClassLoaderEx;
+import icu.lama.minecraft.chatbridge.core.loader.reflection.InstanceBoundCall;
 import icu.lama.minecraft.chatbridge.core.proxy.platform.IPlatformProxy;
 
 import java.io.File;
@@ -19,9 +21,9 @@ public class BridgePlugin extends JarPlugin {
         super(classLoader.getNamedLoadedClasses(), classLoader.getName(), file);
 
         this.platforms = classLoader.getPlatforms();
-        this.initializers = classLoader.getInitializer();
+        this.initializers = classLoader.getInitializers();
 
-        pluginConfig = MinecraftChatBridge.getConfig().withFallback(ConfigFactory.load(classLoader, "defaults.conf"));
+        pluginConfig = MinecraftChatBridge.getConfig().withFallback(ConfigFactory.parseResourcesAnySyntax(classLoader, "defaults.conf"));
         MinecraftChatBridge.updateConfig(pluginConfig);
     }
 
@@ -41,5 +43,9 @@ public class BridgePlugin extends JarPlugin {
 
     public List<InstanceBoundCall> getInitializers() {
         return initializers;
+    }
+
+    public Config getPluginConfig() {
+        return pluginConfig;
     }
 }

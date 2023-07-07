@@ -1,4 +1,6 @@
-package icu.lama.minecraft.chatbridge.core.loader;
+package icu.lama.minecraft.chatbridge.core.loader.annotations;
+
+import icu.lama.minecraft.chatbridge.core.loader.PluginType;
 
 import java.lang.annotation.*;
 
