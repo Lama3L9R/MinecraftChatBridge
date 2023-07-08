@@ -15,7 +15,7 @@ public interface IPlatformProxy extends IProxy {
 
     IProxyChatMember getMember(String uniqueIdentifier);
 
-    IProxyChatMember getMember(IProxyChatMember group, String uniqueIdentifier);
+    IProxyChatMember getMember(IProxyChatGroup group, String uniqueIdentifier);
 
     IProxyChatMember getMember(String groupIdentifier, String uniqueIdentifier);
 

@@ -1,12 +1,15 @@
 package icu.lama.minecraft.chatbridge.platforms.wx;
 
+import com.typesafe.config.Config;
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
-import icu.lama.minecraft.chatbridge.core.binding.GeneralBindingDatabase;
-import icu.lama.minecraft.chatbridge.core.binding.IBindingDatabase;
-import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
+import icu.lama.minecraft.chatbridge.core.events.EventPlatformChatMessage;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
 import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
-import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
+import icu.lama.minecraft.chatbridge.core.loader.PluginType;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.ConfigInject;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Initializer;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Plugin;
+import icu.lama.minecraft.chatbridge.core.proxy.platform.*;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.WXApiClient;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContact;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContactQueryItem;
@@ -15,73 +18,37 @@ import icu.lama.minecraft.chatbridge.platforms.wx.api.out.RequestBase;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
-import java.util.UUID;
 
-public class WechatPlatformBridge implements IPlatformBridge {
-    @SuppressWarnings("unused")
-    public static WechatPlatformBridge INSTANCE = new WechatPlatformBridge();
+@Plugin(name = "wechat", type = PluginType.PLATFORM_PROXY)
+public class WechatPlatformBridge implements IPlatformProxy {
+    public static final WechatPlatformBridge INSTANCE = new WechatPlatformBridge();
     private final HashMap<String, String> uidToName = new HashMap<>();
-    private final IBindingDatabase bindings = new GeneralBindingDatabase();
-    private PlatformReceiveCallback callback;
-    private PlatformConfiguration config;
+    private @ConfigInject Config config;
     private WXApiClient apiClient;
     private WXContact groupContact;
-    private String wechatFormat = "[%s] %s";
-    private String playerJoinFormat = "[+] %s";
-    private String playerLeaveFormat = "[-] %s";
-    private String serverOnlineFormat = "[+] Server";
-    private String serverOfflineFormat = "[-] Server";
+    private String wechatFormat = "";
+    private String playerJoinFormat = "";
+    private String playerLeaveFormat = "";
+    private String serverOnlineFormat = "";
+    private String serverOfflineFormat = "";
 
-    @Override
-    public void send(String name, UUID playerUUID, String msg) {
-        try {
-            apiClient.sendMessage(String.format(wechatFormat, name, msg), groupContact.getUserName());
-        } catch (Exception e) { MinecraftChatBridge.throwException(e, this); }
-    }
-
-    @Override
-    public void send(String msg) {
-        try {
-            apiClient.sendMessage(msg, groupContact.getUserName());
-        } catch (Exception e) { MinecraftChatBridge.throwException(e, this); }
-    }
-
-    @Override
-    public String getPlatformName() {
-        return "wechat";
-    }
-
-    @Override
-    public boolean getAllowNSFWContent() {
-        return false;
-    }
-
-    @Override
-    public void setReceiveCallback(PlatformReceiveCallback callback) {
-        this.callback = callback;
-    }
-
-    @Override
-    public void setConfiguration(PlatformConfiguration config) {
-        this.config = config;
-    }
-
-    @Override
+    @Initializer
     public void init() {
-        this.config.get("lang.wechatFormat", f -> wechatFormat = (String) f);
-        this.config.get("lang.playerJoinFormat", f -> playerJoinFormat = (String) f);
-        this.config.get("lang.playerLeaveFormat", f -> playerLeaveFormat = (String) f);
-        this.config.get("lang.serverOnlineFormat", f -> serverOnlineFormat = (String) f);
-        this.config.get("lang.serverOfflineFormat", f -> serverOfflineFormat = (String) f);
+        wechatFormat = this.config.getString("wechat.lang.wechatFormat");
+        playerJoinFormat = this.config.getString("wechat.lang.playerJoinFormat");
+        playerLeaveFormat = this.config.getString("wechat.lang.playerLeaveFormat");
+        serverOnlineFormat = this.config.getString("wechat.lang.serverOnlineFormat");
+        serverOfflineFormat = this.config.getString("wechat.lang.serverOfflineFormat");
 
-        String cookies = new String(Base64.getDecoder().decode(this.config.getCredentials("cookie")), StandardCharsets.UTF_8);
-        String passTicket = this.config.getCredentials("passTicket");
+        String cookies = new String(Base64.getDecoder().decode(this.config.getString("wechat.credentials.cookie").trim()), StandardCharsets.UTF_8);
+        String passTicket = this.config.getString("wechat.credentials.passTicket");
 
         RequestBase base = new RequestBase(
-            Long.parseLong(this.config.getCredentials("wxuin")),
-            this.config.getCredentials("wxsid"),
-            this.config.getCredentials("skey"),
+            Long.parseLong(this.config.getString("wechat.credentials.wxuin")),
+            this.config.getString("wechat.credentials.wxsid"),
+            this.config.getString("wechat.credentials.skey"),
             "e" + String.valueOf(new Random().nextLong()).substring(1, 16)
         );
 
@@ -97,13 +64,14 @@ public class WechatPlatformBridge implements IPlatformBridge {
                             }
 
                             String[] content = it.getContent().replace("<br/>", "").split(":", 2);
+                            var group = new WechatGroupProxy(groupContact);
 
-                            this.callback.onReceive(this, uidToName.get(content[0]), content[0], content[1]);
+                            PlatformEvents.onMessage.trigger(this, new EventPlatformChatMessage(content[1], group, getMember(group, "wechat:" + content[0])));
                         });
             }, (e) -> MinecraftChatBridge.throwException(e, this));
 
-            String targetGroupName = "" + this.config.get("group");
-            apiClient.getMainContacts().stream()
+            String targetGroupName = this.config.getString("wechat.listenOn");
+            apiClient.getContacts().stream()
                     .filter(it -> it.getMemberCount() > 0 && it.getUserName().startsWith("@@"))
                     .filter(it -> it.getNickName().equals(targetGroupName))
                     .findFirst()
@@ -132,13 +100,101 @@ public class WechatPlatformBridge implements IPlatformBridge {
                 apiClient.sendMessage(String.format(serverOnlineFormat), groupContact.getUserName()));
         MinecraftEvents.onServerBeginShutdown.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(serverOfflineFormat), groupContact.getUserName()));
+        MinecraftEvents.onChatMessage.subscribe((source, msg) ->
+                apiClient.sendMessage(String.format(wechatFormat, source.getName(), msg.getMessage()), groupContact.getUserName()));
 
-        PlatformEvents.onPlatformBridgeLoad.trigger(this, null);
+        PlatformEvents.onBridgeLoad.trigger(this, null);
     }
 
-    @Override
-    public IBindingDatabase getBindingDatabase() {
-        return this.bindings;
+    @Override public List<PlatformFeature> getSupportedFeatures() {
+        return List.of(PlatformFeature.BASIC);
     }
 
+    @Override public List<INamed> getAllContacts() {
+        return null;
+    }
+
+    @Override public INamed getContact(String uniqueIdentifier) {
+        checkIdentifier(uniqueIdentifier);
+        var userName = uniqueIdentifier.substring(7);
+        var contact = apiClient.getContact(userName);
+        if (contact == null) {
+            return null;
+        }
+
+        if (userName.startsWith("@@")) {
+            return new WechatGroupProxy(contact);
+        } else {
+            return new WechatUserProxy(contact);
+        }
+    }
+
+    @Override public IProxyChatGroup getGroup(String uniqueIdentifier) {
+        checkIdentifier(uniqueIdentifier);
+        var userName = uniqueIdentifier.substring(7);
+        var contact = apiClient.getContact(userName);
+        if (contact == null) {
+            return null;
+        }
+
+        if (userName.startsWith("@@")) {
+            return new WechatGroupProxy(contact);
+        } else {
+            throw new IllegalArgumentException("The identifier is for none-group!");
+        }
+    }
+
+    @Override public IProxyChatMember getMember(String uniqueIdentifier) {
+        checkIdentifier(uniqueIdentifier);
+        var userName = uniqueIdentifier.substring(7);
+        var contact = apiClient.getContact(userName);
+        if (contact == null) {
+            return null;
+        }
+
+        if (!userName.startsWith("@@")) {
+            return new WechatUserProxy(contact);
+        } else {
+            throw new IllegalArgumentException("The identifier is for group!");
+        }
+    }
+
+    @Override public IProxyChatMember getMember(IProxyChatGroup group, String uniqueIdentifier) {
+        checkIdentifier(uniqueIdentifier);
+        var userName = uniqueIdentifier.substring(7);
+
+        var contact = ((WXContact) group.unwrap()).getMemberList().stream()
+                .filter(it -> userName.equalsIgnoreCase(it.getUserName()))
+                .findAny();
+        return contact.map(WechatGroupMemeberProxy::new).orElse(null);
+    }
+
+    @Override public IProxyChatMember getMember(String groupIdentifier, String uniqueIdentifier) {
+        return getMember(getGroup(groupIdentifier), uniqueIdentifier);
+    }
+
+    @Override public String getPlatformName() {
+        return "wechat";
+    }
+
+    @Override public void sendMessage(String uniqueIdentifier, String msg) {
+        checkIdentifier(uniqueIdentifier);
+        var userName = uniqueIdentifier.substring(7);
+
+        apiClient.sendMessage(msg, userName);
+    }
+
+    @Override public Object unwrap() {
+        return apiClient;
+    }
+
+    public WXApiClient getAPIClient() {
+        return apiClient;
+    }
+
+    private void checkIdentifier(String uniqueIdentifier) {
+        if (!uniqueIdentifier.startsWith("wechat:")) {
+            throw new IllegalArgumentException("This platform only support wechat type identifier");
+        }
+    }
 }

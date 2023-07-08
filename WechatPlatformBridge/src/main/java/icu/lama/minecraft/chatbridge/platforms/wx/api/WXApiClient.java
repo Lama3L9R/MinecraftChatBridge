@@ -5,31 +5,29 @@ import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContact;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXContactQueryItem;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXMessage;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.data.WXSyncKey;
-import icu.lama.minecraft.chatbridge.platforms.wx.api.in.ResponseQueryContact;
-import icu.lama.minecraft.chatbridge.platforms.wx.api.in.ResponseSendMessage;
-import icu.lama.minecraft.chatbridge.platforms.wx.api.in.ResponseWXSync;
-import icu.lama.minecraft.chatbridge.platforms.wx.api.in.ResponseWxInit;
+import icu.lama.minecraft.chatbridge.platforms.wx.api.in.*;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.out.*;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.utils.HttpRequestResult;
 import icu.lama.minecraft.chatbridge.platforms.wx.api.utils.RequestHelper;
+import org.jetbrains.annotations.Nullable;
 
+import java.io.StringReader;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class WXApiClient {
-    private final RequestBase base;
-    private final String passTicket;
+    private RequestBase base;
+    private String passTicket;
     private WXSyncKey syncKey;
-    private final ScheduledExecutorService taskExecutor = Executors.newScheduledThreadPool(2);
+    private ScheduledExecutorService taskExecutor;
     private OnErrorCallback onError;
     private OnMessageCallback onMessage;
     private String wxUsername;
-    private List<WXContact> mainContacts;
+    private final Map<String, WXContact> contacts = new HashMap<>();
 
     public WXApiClient(RequestBase base, String passTicket, String cookie) throws Exception {
         this.base = base;
@@ -43,6 +41,8 @@ public class WXApiClient {
         this.onError = errorCallback;
         this.onMessage = onMessage;
 
+        taskExecutor = Executors.newScheduledThreadPool(2);
+
         RequestWxInit request = new RequestWxInit(base);
         HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxinit"
                 + "?pass_ticket=" + urlEncode(passTicket), request);
@@ -51,9 +51,13 @@ public class WXApiClient {
             throw new RuntimeException("Failed to perform wxapi init. status code=" + result.getStatusCode() + ". remote response=" + response);
         }
 
-        mainContacts = response.getContactList();
+        queryAllContact().forEach(it -> contacts.put(it.getUserName(), it));
         syncKey = response.getSyncKey();
         wxUsername = response.getUser().getUserName();
+    }
+
+    public void shutdown() {
+        taskExecutor.shutdown();
     }
 
     public void startPollMessages() {
@@ -146,13 +150,63 @@ public class WXApiClient {
     public List<WXContact> queryAllContact() throws Exception {
         HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxgetcontact"
                 + "?pass_ticket=" + urlEncode(passTicket)
-                + "&skey" + urlEncode(base.getSkey()), new RequestWXGetContact(base));
+                + "&skey=" + urlEncode(base.getSkey()), new RequestWXGetContact(base));
         ResponseQueryContact response = result.deserialize(new TypeToken<>() { });
         return response.getContactList();
     }
 
-    public List<WXContact> getMainContacts() {
-        return mainContacts;
+    public void refreshLogin() throws Exception {
+        var result = RequestHelper.get("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxpushloginurl" +
+                "?mod=desktop" +
+                "&uin=" + this.base.getUin());
+        ResponsePushLogin response = result.deserialize(new TypeToken<>() { });
+        if (Integer.parseInt(response.getRet()) == 0) {
+            waitLogin(response.getUuid());
+        } else {
+            throw new RuntimeException("Failed to push login. Server returned: " + response.getRet() + ", " + response.getMsg());
+        }
+    }
+
+    public void waitLogin(String uuid) throws Exception {
+        var redirectURL = waitLoginConfirm(uuid, 5);
+        var response = RequestHelper.get(redirectURL + "&version=v2&fun=new&mod=desktop&target=t");
+        var xml = response.toString();
+
+        var skey = xml.substring(xml.indexOf("<skey>") + 1, xml.indexOf("</skey>"));
+        var wxsid = xml.substring(xml.indexOf("<wxsid>") + 1, xml.indexOf("</wxsid>"));
+        var wxuin = xml.substring(xml.indexOf("<wxuin>") + 1, xml.indexOf("</wxuin>"));
+        var passTicket = xml.substring(xml.indexOf("<pass_ticket>") + 1, xml.indexOf("</pass_ticket>"));
+        var cookie = response.getConnection().getHeaderField("set-cookie");
+
+        this.base = new RequestBase(Long.parseLong(wxuin), wxsid, skey, "e" + String.valueOf(new Random().nextLong()).substring(1, 16));
+        this.passTicket = passTicket;
+        RequestHelper.setCookieStore(cookie);
+    }
+
+    private String waitLoginConfirm(String uuid, int retries) throws Exception {
+        if (retries == 0) {
+            throw new RuntimeException("Failed to confirm login! No more chance to retry");
+        }
+        var result = RequestHelper.get("https://login.wx.qq.com/cgi-bin/mmwebwx-bin/login?tip=1&uuid=" + uuid);
+        var prop = new Properties();
+        prop.load(new StringReader(String.join("\n", Arrays.asList(result.toString()
+                .replace("\"", "")
+                .split(";")))));
+        if (prop.get("window.code").equals("200")) {
+            return (String) prop.get("window.redirect_uri");
+        } else {
+            return waitLoginConfirm(uuid, retries - 1);
+        }
+    }
+
+    public Collection<WXContact> getContacts() {
+        return contacts.values();
+    }
+
+    public Map<String, WXContact> getContactsByUserName() { return contacts; }
+
+    public @Nullable WXContact getContact(String userName) {
+        return this.contacts.get(userName);
     }
 
     private String urlEncode(String data) {

@@ -1,8 +1,0 @@
-[wechat.extraContents]
-group = "some group name"
-[wechat.credentials]
-skey = ""
-wxsid = ""
-wxuin = ""
-passTicket = ""
-cookie = ""

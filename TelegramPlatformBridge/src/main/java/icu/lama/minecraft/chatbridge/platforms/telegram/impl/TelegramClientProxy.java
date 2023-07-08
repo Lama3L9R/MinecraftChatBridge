@@ -14,18 +14,15 @@ import java.util.List;
 public class TelegramClientProxy implements IPlatformProxy {
     public static final TelegramClientProxy INSTANCE = new TelegramClientProxy();
 
-    @Override
-    public List<PlatformFeature> getSupportedFeatures() {
+    @Override public List<PlatformFeature> getSupportedFeatures() {
         return List.of(PlatformFeature.BASIC, PlatformFeature.DELETE, PlatformFeature.BUTTONS, PlatformFeature.MODIFY);
     }
 
-    @Override
-    public List<INamed> getAllContacts() {
+    @Override public List<INamed> getAllContacts() {
         return List.of(); // Telegram doesn't support this at all...
     }
 
-    @Override
-    public INamed getContact(String uniqueIdentifier) {
+    @Override public INamed getContact(String uniqueIdentifier) {
         checkIdentifier(uniqueIdentifier);
 
         var chat = TelegramChatPlatform.INSTANCE.getBot()
@@ -45,8 +42,7 @@ public class TelegramClientProxy implements IPlatformProxy {
         return new TelegramChatGroupProxy(chat);
     }
 
-    @Override
-    public IProxyChatGroup getGroup(String uniqueIdentifier) {
+    @Override public IProxyChatGroup getGroup(String uniqueIdentifier) {
         checkIdentifier(uniqueIdentifier);
         var chat = TelegramChatPlatform.INSTANCE.getBot()
                 .execute(new GetChat(uniqueIdentifier.substring(9)))
@@ -55,8 +51,7 @@ public class TelegramClientProxy implements IPlatformProxy {
         return new TelegramChatGroupProxy(chat);
     }
 
-    @Override
-    public IProxyChatMember getMember(String uniqueIdentifier) {
+    @Override public IProxyChatMember getMember(String uniqueIdentifier) {
         checkIdentifier(uniqueIdentifier);
 
         var userId = Long.parseLong(uniqueIdentifier.substring(9));
@@ -68,8 +63,7 @@ public class TelegramClientProxy implements IPlatformProxy {
         return new TelegramUserProxy(user);
     }
 
-    @Override
-    public IProxyChatMember getMember(IProxyChatMember group, String uniqueIdentifier) {
+    @Override public IProxyChatMember getMember(IProxyChatGroup group, String uniqueIdentifier) {
         checkIdentifier(uniqueIdentifier);
 
         var userId = Long.parseLong(uniqueIdentifier.substring(9));
@@ -81,27 +75,15 @@ public class TelegramClientProxy implements IPlatformProxy {
         return new TelegramUserProxy(user);
     }
 
-    @Override
-    public IProxyChatMember getMember(String groupIdentifier, String uniqueIdentifier) {
-        checkIdentifier(uniqueIdentifier);
-        checkIdentifier(groupIdentifier);
-
-        var userId = Long.parseLong(uniqueIdentifier.substring(9));
-        var user = TelegramChatPlatform.INSTANCE.getBot()
-                .execute(new GetChatMember(groupIdentifier.substring(9), userId))
-                .chatMember().user();
-
-
-        return new TelegramUserProxy(user);
+    @Override public IProxyChatMember getMember(String groupIdentifier, String uniqueIdentifier) {
+        return getMember(getGroup(groupIdentifier), uniqueIdentifier);
     }
 
-    @Override
-    public String getPlatformName() {
+    @Override public String getPlatformName() {
         return "telegram";
     }
 
-    @Override
-    public void sendMessage(String uniqueIdentifier, String msg) {
+    @Override public void sendMessage(String uniqueIdentifier, String msg) {
         checkIdentifier(uniqueIdentifier);
 
         TelegramChatPlatform.INSTANCE.getBot().execute(new SendMessage(uniqueIdentifier.substring(9), msg));
@@ -113,8 +95,7 @@ public class TelegramClientProxy implements IPlatformProxy {
         }
     }
 
-    @Override
-    public Object unwrap() {
+    @Override public Object unwrap() {
         return TelegramChatPlatform.INSTANCE.getBot();
     }
 }

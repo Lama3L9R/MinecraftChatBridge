@@ -14,6 +14,6 @@ rootProject.name = 'MinecraftChatBridge'
 include 'MinecraftChatBridgeCore'
 include 'TelegramPlatformBridge'
 include 'TestMinecraftBridge'
-// include 'WechatPlatformBridge'
+include 'WechatPlatformBridge'
 // include 'FabricChatBridge'
 

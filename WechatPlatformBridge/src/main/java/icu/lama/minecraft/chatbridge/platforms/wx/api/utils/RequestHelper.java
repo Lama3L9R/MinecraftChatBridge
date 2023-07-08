@@ -46,6 +46,27 @@ public class RequestHelper {
         return readRemote(connection);
     }
 
+    public static HttpRequestResult getWithHeaders(String url, String... headers) throws Exception {
+        if (headers.length % 2 != 0) {
+            throw new IllegalArgumentException("Header is missing a value");
+        }
+
+        HttpsURLConnection connection = (HttpsURLConnection) (new URL(url)).openConnection();
+
+        connection.setRequestProperty("Cookie", cookieStore.toString());
+        connection.setRequestProperty("extspam", UOS_MAGIC);
+        connection.setRequestProperty("client-version", "2.0.0");
+
+        for (var i = 0; i < headers.length; i += 2) {
+            connection.setRequestProperty(headers[i], headers[i + 1]);
+        }
+
+        connection.setDoInput(true);
+        connection.setDoOutput(true);
+
+        return readRemote(connection);
+    }
+
     private static HttpRequestResult readRemote(HttpsURLConnection connection) throws IOException {
         cookieStore.update(connection.getHeaderField("Set-Cookie"));
         InputStream remote = connection.getInputStream();
@@ -59,7 +80,7 @@ public class RequestHelper {
         remote.close();
         connection.disconnect();
 
-        return new HttpRequestResult(connection.getResponseCode(), response);
+        return new HttpRequestResult(connection.getResponseCode(), response, connection);
     }
 
     public static void setCookieStore(String cookie) { cookieStore.update(cookie); }
