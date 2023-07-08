@@ -2,6 +2,7 @@ package icu.lama.minecraft.chatbridge.core.proxy.minecraft;
 
 import icu.lama.minecraft.chatbridge.core.proxy.IProxy;
 import icu.lama.minecraft.chatbridge.core.proxy.Risky;
+import icu.lama.minecraft.chatbridge.core.proxy.command.CommandManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -67,4 +68,10 @@ public interface IMinecraftServerProxy extends IProxy {
      * @throws UnsupportedOperationException May throw in some implementation of MinecraftServer
      */
     @Risky void broadcastPacket(byte[] data);
+
+    /**
+     * Get cross-platform command manager. You can use SimpleCommandManagerImpl for implementation.
+     * @return command manager
+     */
+    CommandManager getCommandManager();
 }

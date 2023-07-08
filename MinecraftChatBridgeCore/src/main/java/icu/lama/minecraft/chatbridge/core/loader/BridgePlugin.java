@@ -15,6 +15,7 @@ public class BridgePlugin extends JarPlugin {
     private final List<IPlatformProxy> platforms;
     private final List<InstanceBoundCall> initializers;
     private final Config pluginConfig;
+    private PluginStatus pluginStatus = PluginStatus.LOADED;
 
     public BridgePlugin(ClassLoaderEx classLoader,
                         File file) {
@@ -33,8 +34,20 @@ public class BridgePlugin extends JarPlugin {
         this.platforms = platforms;
         this.initializers = initializers;
 
+        platforms.forEach(MinecraftChatBridge::register);
+
         pluginConfig = MinecraftChatBridge.getConfig().withFallback(ConfigFactory.load(cl, "defaults.conf"));
         MinecraftChatBridge.updateConfig(pluginConfig);
+    }
+
+    public void init() {
+        try {
+            this.initializers.forEach(InstanceBoundCall::call);
+            pluginStatus = PluginStatus.INITIALIZED;
+        } catch (Throwable ex) {
+            pluginStatus = PluginStatus.FAILED;
+            ex.printStackTrace();
+        }
     }
 
     public List<IPlatformProxy> getPlatforms() {
@@ -47,5 +60,9 @@ public class BridgePlugin extends JarPlugin {
 
     public Config getPluginConfig() {
         return pluginConfig;
+    }
+
+    public PluginStatus getPluginStatus() {
+        return pluginStatus;
     }
 }
