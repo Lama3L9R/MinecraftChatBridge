@@ -1,6 +1,5 @@
 package icu.lama.minecraft.chatbridge.core.binding;
 
-import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
