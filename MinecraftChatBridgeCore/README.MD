@@ -16,14 +16,6 @@ There are some official maintained subprojects can be seen as Example project.
 
 ---
 
-## 项目结构
-项目分为两个部分：MinecraftBridge和PlatformBridge
-
-通俗的说，MinecraftBridge 是将不同的服务器实现接口统一到 MinecraftChatBridgeCore 中相关接口。
-而 PlatformBridge 是将不同的聊天平台接口统一到 MinecraftChatBridgeCore 中相关接口。
-
-有了这两个统一之后，就可以进行任意mc服务器和聊天平台的组合转发了
-
 ## 我是用户
 **你不应该看这里！快离开！**
 
