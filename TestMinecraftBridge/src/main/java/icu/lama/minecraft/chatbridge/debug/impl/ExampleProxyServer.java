@@ -1,5 +1,6 @@
 package icu.lama.minecraft.chatbridge.debug.impl;
 
+import icu.lama.minecraft.chatbridge.core.proxy.command.CommandManager;
 import icu.lama.minecraft.chatbridge.core.proxy.minecraft.IMinecraftServerProxy;
 import icu.lama.minecraft.chatbridge.core.proxy.minecraft.IProxyPlayer;
 import icu.lama.minecraft.chatbridge.core.proxy.minecraft.ServerType;
@@ -56,5 +57,9 @@ public class ExampleProxyServer implements IMinecraftServerProxy {
     @Override
     public void broadcastPacket(byte[] data) {
         System.out.println("BroadcastPacket >> " + Arrays.toString(data));
+    }
+
+    @Override public CommandManager getCommandManager() {
+        return null;
     }
 }

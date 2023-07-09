@@ -24,6 +24,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:0.14.21"
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:0.83.0+1.20.1"
+
+    implementation 'com.typesafe:config:1.4.2'
     include project(":MinecraftChatBridgeCore")
     implementation project(':MinecraftChatBridgeCore')
 
@@ -41,9 +43,13 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 17
+    it.options.release.set(17)
 }
 
 java {
     withSourcesJar()
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/fabric-minecraft-bridge.accesswidener")
 }

@@ -14,6 +14,7 @@ import java.util.Map;
 public class BridgePlugin extends JarPlugin {
     private final List<IPlatformProxy> platforms;
     private final List<InstanceBoundCall> initializers;
+    private final List<InstanceBoundCall> finalizers;
     private final Config pluginConfig;
     private PluginStatus pluginStatus = PluginStatus.LOADED;
 
@@ -23,16 +24,18 @@ public class BridgePlugin extends JarPlugin {
 
         this.platforms = classLoader.getPlatforms();
         this.initializers = classLoader.getInitializers();
+        this.finalizers = classLoader.getFinalizers();
 
         pluginConfig = MinecraftChatBridge.getConfig().withFallback(ConfigFactory.parseResourcesAnySyntax(classLoader, "defaults.conf"));
         MinecraftChatBridge.updateConfig(pluginConfig);
     }
 
-    public BridgePlugin(ClassLoader cl, Map<String, Class<?>> classes, String identifier, File file, List<IPlatformProxy> platforms, List<InstanceBoundCall> initializers) {
+    public BridgePlugin(ClassLoader cl, Map<String, Class<?>> classes, String identifier, File file, List<IPlatformProxy> platforms, List<InstanceBoundCall> initializers, List<InstanceBoundCall> finalizers) {
         super(classes, identifier, file);
 
         this.platforms = platforms;
         this.initializers = initializers;
+        this.finalizers = finalizers;
 
         platforms.forEach(MinecraftChatBridge::register);
 
@@ -46,7 +49,17 @@ public class BridgePlugin extends JarPlugin {
             pluginStatus = PluginStatus.INITIALIZED;
         } catch (Throwable ex) {
             pluginStatus = PluginStatus.FAILED;
-            ex.printStackTrace();
+            MinecraftChatBridge.getErrorHandler().onError(ex, this);
+            MinecraftChatBridge.unloadPlugin(this);
+        }
+    }
+
+    public void callFinalize() {
+        try {
+            this.finalizers.forEach(InstanceBoundCall::call);
+        } catch (Throwable ex) {
+            MinecraftChatBridge.getErrorHandler().onError(ex, this);
+            System.out.println("WARNING: Runtime error was caught in finalizer! Plugin may not be fully unloaded! It is recommended to restart your server!");
         }
     }
 

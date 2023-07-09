@@ -3,6 +3,7 @@ package icu.lama.minecraft.chatbridge.core.loader.reflection;
 import icu.lama.minecraft.chatbridge.core.loader.BridgePlugin;
 import icu.lama.minecraft.chatbridge.core.loader.PluginType;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.ConfigInject;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Finalizer;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.Initializer;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.Plugin;
 import icu.lama.minecraft.chatbridge.core.proxy.platform.IPlatformProxy;
@@ -24,6 +25,7 @@ import java.util.stream.StreamSupport;
 public class ClassLoaderEx extends ClassLoader {
     private final HashMap<String, Class<?>> loadedClasses = new HashMap<>();
     private final ArrayList<InstanceBoundCall> initializers = new ArrayList<>();
+    private final ArrayList<InstanceBoundCall> finalizers = new ArrayList<>();
     private final ArrayList<IPlatformProxy> platforms = new ArrayList<>();
     private final HashMap<String, URL> resources = new HashMap<>();
     private final TreeMap<String, URL> constructionPending = new TreeMap<>();
@@ -124,6 +126,18 @@ public class ClassLoaderEx extends ClassLoader {
             final Object instanceCpy = instance;
             initializers.addAll(Arrays.stream(it.getDeclaredMethods())
                     .filter(m -> m.getAnnotation(Initializer.class) != null)
+                    .map(m -> {
+                        if ((m.getModifiers() & Modifier.STATIC) != 0) {
+                            return new InstanceBoundCall(null, instanceCpy);
+                        } else {
+                            return new InstanceBoundCall(m, instanceCpy);
+                        }
+                    })
+                    .collect(Collectors.toList())
+            );
+
+            finalizers.addAll(Arrays.stream(it.getDeclaredMethods())
+                    .filter(m -> m.getAnnotation(Finalizer.class) != null)
                     .map(m -> {
                         if ((m.getModifiers() & Modifier.STATIC) != 0) {
                             return new InstanceBoundCall(null, instanceCpy);
@@ -240,5 +254,13 @@ public class ClassLoaderEx extends ClassLoader {
                 .filter(it -> it.getKey().contains(name))
                 .map(Map.Entry::getValue)
                 .collect(Collectors.toList()));
+    }
+
+    @Override public String getName() {
+        return name;
+    }
+
+    public ArrayList<InstanceBoundCall> getFinalizers() {
+        return finalizers;
     }
 }

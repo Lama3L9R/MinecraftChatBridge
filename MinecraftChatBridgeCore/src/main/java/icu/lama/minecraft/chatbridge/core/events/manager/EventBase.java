@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class EventBase<D, C extends IEventCallback<S, D>, S> {
-    private List<C> callbacks = new ArrayList<>();
+    private final List<C> callbacks = new ArrayList<>();
 
     /**
      * Trigger this event.
@@ -35,6 +35,9 @@ public abstract class EventBase<D, C extends IEventCallback<S, D>, S> {
      * @param key key of handler
      */
     public void unsubscribe(int key) {
+        if (key < 0) {
+            return;
+        }
         callbacks.set(key, null);
     }
 }

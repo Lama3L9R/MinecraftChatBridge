@@ -28,6 +28,7 @@ public class WXApiClient {
     private OnMessageCallback onMessage;
     private String wxUsername;
     private final Map<String, WXContact> contacts = new HashMap<>();
+    private volatile long lastSync = System.currentTimeMillis();
 
     public WXApiClient(RequestBase base, String passTicket, String cookie) throws Exception {
         this.base = base;
@@ -37,8 +38,7 @@ public class WXApiClient {
         RequestHelper.setCookieStore(cookie);
     }
 
-    public void init(OnMessageCallback onMessage, OnErrorCallback errorCallback) throws Exception {
-        this.onError = errorCallback;
+    public void init(OnMessageCallback onMessage) throws Exception {
         this.onMessage = onMessage;
 
         taskExecutor = Executors.newScheduledThreadPool(2);
@@ -61,12 +61,21 @@ public class WXApiClient {
     }
 
     public void startPollMessages() {
-        taskExecutor.scheduleAtFixedRate(this::asyncSync, 0, 1, TimeUnit.SECONDS);
+        taskExecutor.submit(this::asyncSync);
     }
 
     public void asyncSync() {
         if (syncKey == null) {
             throw new IllegalArgumentException("Failed to sync messages! Sync keys are missing. Are you logged in?");
+        }
+
+        System.out.println("Polling messages...");
+
+        if (lastSync + 1000 > System.currentTimeMillis()) {
+            System.out.println("Too soon to poll again, calm for 1s");
+            try {
+                Thread.sleep(1000 - (System.currentTimeMillis() - lastSync));
+            } catch (Throwable ignored) { }
         }
 
         try {
@@ -99,6 +108,9 @@ public class WXApiClient {
             }
 
             if (selector == 0) {
+                lastSync = System.currentTimeMillis();
+                startPollMessages();
+
                 return;
             }
 
@@ -114,9 +126,13 @@ public class WXApiClient {
 
             onMessage.onMessage(syncResponse);
         } catch (Exception e) {
-            onError.onError(e);
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
-    }
+
+        lastSync = System.currentTimeMillis();
+        startPollMessages();
+    }// WechatPlatformBridge-1.0-SNAPSHOT-all.jar
 
     public void sendMessage(String message, String userID) {
         taskExecutor.submit(() -> {

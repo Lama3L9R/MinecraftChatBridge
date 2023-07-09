@@ -13,23 +13,29 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.lang.reflect.Array;
+import java.util.*;
 
 public class MinecraftChatBridge {
     private static final Map<String, IPlatformProxy> platforms = new HashMap<>();
     private static final HashMap<String, BridgePlugin> loadedPlugins = new HashMap<>();
     private static final HashMap<String, ClassLoader> classLoaders = new HashMap<>(); // use for hold all classloader reference | avoid class being GC-ed
-    private static Config config; // volatile + sync lock
+    private static File dataRoot;
+    private static Config config = null; // volatile + sync lock
     private static IMinecraftServerProxy minecraft;
     private static ErrorCallback onError;
 
     public static void init(@NotNull File dataFolder, @NotNull IMinecraftServerProxy minecraft) {
-        init(dataFolder, minecraft, (exception, source) -> {
-            System.err.println("A runtime error was found on " + source.getPlatformName());
-            exception.printStackTrace();
+        init(dataFolder, minecraft, new ErrorCallback() {
+            @Override public void onError(Throwable e, BridgePlugin source) {
+                System.err.println("A runtime error was found on " + source.getIdentifier());
+                e.printStackTrace();
+            }
+
+            @Override public void onError(Throwable e, IPlatformProxy platform) {
+                System.err.println("A runtime error was found on " + platform.getPlatformName());
+                e.printStackTrace();
+            }
         });
     }
 
@@ -39,6 +45,7 @@ public class MinecraftChatBridge {
 
         MinecraftChatBridge.onError = errorHandler;
         MinecraftChatBridge.minecraft = minecraft;
+        MinecraftChatBridge.dataRoot = dataFolder;
 
         if (!dataFolder.exists()) {
             if (!dataFolder.mkdir()) {
@@ -46,13 +53,7 @@ public class MinecraftChatBridge {
             }
         }
 
-        var configFile = new File(dataFolder, "core.conf");
-        if (!configFile.exists()) {
-            saveConfig(configFile);
-        }
-
-        var userConfig = ConfigFactory.parseFile(configFile);
-        config = config != null ? userConfig.withFallback(config) : userConfig;
+        reloadConfig();
 
         var platformDirectory = new File(dataFolder, "plugins");
         if (!platformDirectory.exists()) {
@@ -72,9 +73,10 @@ public class MinecraftChatBridge {
             }
         }
 
-        saveConfig(configFile);
+        saveConfig(new File(dataRoot, "core.conf"));
 
-        loadedPlugins.values().forEach(BridgePlugin::init);
+        ArrayList<BridgePlugin> pendingInits = new ArrayList<>(loadedPlugins.values()); // Prevent concurrent modification
+        pendingInits.forEach(BridgePlugin::init);
     }
 
     /**
@@ -107,7 +109,18 @@ public class MinecraftChatBridge {
      * @param e exception
      * @param source exception source
      */
-    public static void throwException(Throwable e, @NotNull IPlatformProxy source) {
+    public static void throwException(Throwable e, @NotNull BridgePlugin source) {
+        Objects.requireNonNull(source);
+
+        onError.onError(e, source);
+    }
+
+    /**
+     * Throw a runtime exception. Should always be called by Platform Bridge
+     * @param e exception
+     * @param source exception source
+     */
+    @Deprecated public static void throwException(Throwable e, @NotNull IPlatformProxy source) {
         Objects.requireNonNull(source);
 
         onError.onError(e, source);
@@ -131,15 +144,31 @@ public class MinecraftChatBridge {
         return null;
     }
 
+    public static BridgePlugin loadPlugin(String name) {
+        return loadPlugin(new File(dataRoot, "plugins/" + name));
+    }
+
 
     public static void unloadPlugin(String identifier) {
+        if (!loadedPlugins.containsKey(identifier)) {
+            return;
+        }
+
+        loadedPlugins.get(identifier).callFinalize();
+
         loadedPlugins.remove(identifier);
         classLoaders.remove(identifier);
+
+        System.gc(); // force gc to remove classes
     }
 
     public static void unloadPlugin(BridgePlugin plugin) {
+        plugin.callFinalize();
+
         loadedPlugins.remove(plugin.getIdentifier());
         classLoaders.remove(plugin.getIdentifier());
+
+        System.gc(); // force gc to remove classes
     }
 
     public static Collection<BridgePlugin> getLoadedPlugins() {
@@ -182,5 +211,24 @@ public class MinecraftChatBridge {
 
     public static IMinecraftServerProxy getMinecraftProxy() {
         return minecraft;
+    }
+
+    public static ErrorCallback getErrorHandler() {
+        return onError;
+    }
+
+    public static File getDataRoot() {
+        return dataRoot;
+    }
+
+    public static void reloadConfig() {
+        var configFile = new File(dataRoot, "core.conf");
+        if (!configFile.exists()) {
+            saveConfig(configFile);
+        }
+
+        var userConfig = ConfigFactory.parseFile(configFile);
+        config = config != null ? userConfig.withFallback(config) : userConfig;
+        config = config.withFallback(ConfigFactory.parseResourcesAnySyntax(MinecraftChatBridge.class.getClassLoader(), "defaults.conf"));
     }
 }

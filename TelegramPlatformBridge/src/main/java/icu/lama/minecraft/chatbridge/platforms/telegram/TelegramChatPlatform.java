@@ -11,6 +11,7 @@ import icu.lama.minecraft.chatbridge.core.events.EventPlatformChatMessage;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
 import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.ConfigInject;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Finalizer;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.Initializer;
 import icu.lama.minecraft.chatbridge.platforms.telegram.impl.TelegramChatGroupProxy;
 import icu.lama.minecraft.chatbridge.platforms.telegram.impl.TelegramClientProxy;
@@ -24,6 +25,12 @@ public class TelegramChatPlatform {
     private TelegramBot bot;
     private long chatId;
 
+    private int eventOnServerSetupCompleteHandle = -1;
+    private int eventOnServerBeginShutdownHandle = -1;
+    private int eventOnChatMessageHandle = -1;
+    private int eventOnPlayerJoinHandle = -1;
+    private int eventOnPlayerLeaveHandle = -1;
+
     private void sendRaw(String msg) {
         bot.execute(new SendMessage(chatId, msg), new Callback<SendMessage, SendResponse>() {
             @Override public void onResponse(SendMessage request, SendResponse response) { }
@@ -34,8 +41,6 @@ public class TelegramChatPlatform {
     @Initializer public void init() {
         bot = new TelegramBot(config.getString("telegram.botToken"));
         chatId = config.getLong("telegram.chatId");
-
-        System.out.println("Invoke init");
 
         bot.setUpdatesListener(updates -> {
             updates.forEach(update -> {
@@ -52,16 +57,28 @@ public class TelegramChatPlatform {
             });
             return UpdatesListener.CONFIRMED_UPDATES_ALL;
         });
-        MinecraftEvents.onServerSetupComplete.subscribe((__, ___) -> sendRaw("[+] Server"));
-        MinecraftEvents.onServerBeginShutdown.subscribe((__, ___) -> sendRaw("[-] Server"));
-        MinecraftEvents.onChatMessage.subscribe((source, msg) -> {
+        eventOnServerSetupCompleteHandle = MinecraftEvents.onServerSetupComplete.subscribe((__, ___) -> sendRaw("[+] Server"));
+        eventOnServerBeginShutdownHandle = MinecraftEvents.onServerBeginShutdown.subscribe((__, ___) -> sendRaw("[-] Server"));
+        eventOnChatMessageHandle = MinecraftEvents.onChatMessage.subscribe((source, msg) -> {
             if (!msg.isCanceled()) {
                 sendRaw(source.getName() + ": " + msg.getMessage());
             }
         });
 
-        MinecraftEvents.onPlayerJoin.subscribe((source, __) -> sendRaw("[+] " + source.getName()));
-        MinecraftEvents.onPlayerLeave.subscribe((source, __) -> sendRaw("[-] " + source.getName()));
+        eventOnPlayerJoinHandle = MinecraftEvents.onPlayerJoin.subscribe((source, __) -> sendRaw("[+] " + source.getName()));
+        eventOnPlayerLeaveHandle = MinecraftEvents.onPlayerLeave.subscribe((source, __) -> sendRaw("[-] " + source.getName()));
+    }
+
+    @Finalizer public void onShutdown() {
+        MinecraftEvents.onServerSetupComplete.unsubscribe(eventOnServerSetupCompleteHandle);
+        MinecraftEvents.onServerBeginShutdown.unsubscribe(eventOnServerBeginShutdownHandle);
+        MinecraftEvents.onChatMessage.unsubscribe(eventOnChatMessageHandle);
+        MinecraftEvents.onPlayerJoin.unsubscribe(eventOnPlayerJoinHandle);
+        MinecraftEvents.onPlayerLeave.unsubscribe(eventOnPlayerLeaveHandle);
+
+        bot.shutdown();
+
+        System.out.println("Telegram platform proxy shutdown successfully");
     }
 
     public TelegramBot getBot() {

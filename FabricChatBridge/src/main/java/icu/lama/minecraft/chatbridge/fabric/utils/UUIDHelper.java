@@ -1,6 +1,5 @@
 package icu.lama.minecraft.chatbridge.fabric.utils;
 
-import net.fabricmc.api.Environment;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Uuids;
 

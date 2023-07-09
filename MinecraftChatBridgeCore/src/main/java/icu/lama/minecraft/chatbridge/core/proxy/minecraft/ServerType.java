@@ -12,12 +12,12 @@ public enum ServerType {
     /**
      * Modded minecraft server
      * Forge, Fabric, Liteloader etc.
-     * /
+     */
     MINECRAFT_MODDED_SERVER,
     /**
      * Modded minecraft client
      * Forge, Fabric, Liteloader etc.
-     * /
+     */
     MINECRAFT_MODDED_CLIENT,
     /**
      * Plugin-only minecraft server

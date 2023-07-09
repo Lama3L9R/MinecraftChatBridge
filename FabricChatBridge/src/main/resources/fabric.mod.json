@@ -22,8 +22,8 @@
       "icu.lama.minecraft.chatbridge.fabric.FabricMinecraftBridge"
     ]
   },
-  "mixins": [ "chatbridge.mixins.json" ],
-
+  "mixins": [ ],
+  "accessWidener": "fabric-minecraft-bridge.accesswidener",
   "depends": {
     "fabricloader": ">=0.14.21",
     "fabric-api": "*",

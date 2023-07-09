@@ -7,6 +7,7 @@ import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
 import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
 import icu.lama.minecraft.chatbridge.core.loader.PluginType;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.ConfigInject;
+import icu.lama.minecraft.chatbridge.core.loader.annotations.Finalizer;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.Initializer;
 import icu.lama.minecraft.chatbridge.core.loader.annotations.Plugin;
 import icu.lama.minecraft.chatbridge.core.proxy.platform.*;
@@ -33,6 +34,12 @@ public class WechatPlatformBridge implements IPlatformProxy {
     private String playerLeaveFormat = "";
     private String serverOnlineFormat = "";
     private String serverOfflineFormat = "";
+
+    private int eventOnServerSetupCompleteHandle = -1;
+    private int eventOnServerBeginShutdownHandle = -1;
+    private int eventOnChatMessageHandle = -1;
+    private int eventOnPlayerJoinHandle = -1;
+    private int eventOnPlayerLeaveHandle = -1;
 
     @Initializer
     public void init() {
@@ -64,16 +71,22 @@ public class WechatPlatformBridge implements IPlatformProxy {
                             }
 
                             String[] content = it.getContent().replace("<br/>", "").split(":", 2);
-                            var group = new WechatGroupProxy(groupContact);
 
-                            PlatformEvents.onMessage.trigger(this, new EventPlatformChatMessage(content[1], group, getMember(group, "wechat:" + content[0])));
+                            if (groupContact.getUserName().startsWith("@@")) {
+                                var group = new WechatGroupProxy(groupContact);
+
+                                PlatformEvents.onMessage.trigger(this, new EventPlatformChatMessage(content[1], group, getMember(group, "wechat:" + content[0])));
+                            } else {
+                                var contact = new WechatUserProxy(groupContact);
+
+                                PlatformEvents.onMessage.trigger(this, new EventPlatformChatMessage(content[0], contact, contact));
+                            }
                         });
-            }, (e) -> MinecraftChatBridge.throwException(e, this));
+            });
 
             String targetGroupName = this.config.getString("wechat.listenOn");
             apiClient.getContacts().stream()
-                    .filter(it -> it.getMemberCount() > 0 && it.getUserName().startsWith("@@"))
-                    .filter(it -> it.getNickName().equals(targetGroupName))
+                    .filter(it -> it.toString().contains(targetGroupName))
                     .findFirst()
                     .ifPresentOrElse(
                         (target) -> groupContact = target,
@@ -89,21 +102,34 @@ public class WechatPlatformBridge implements IPlatformProxy {
 
             apiClient.startPollMessages();
         } catch (Exception e) {
-            MinecraftChatBridge.throwException(e, this);
+            throw new RuntimeException(e);
         }
 
-        MinecraftEvents.onPlayerJoin.subscribe((source, d) ->
+        eventOnPlayerJoinHandle = MinecraftEvents.onPlayerJoin.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(playerJoinFormat, source.getName()), groupContact.getUserName()));
-        MinecraftEvents.onPlayerLeave.subscribe((source, d) ->
+        eventOnPlayerLeaveHandle = MinecraftEvents.onPlayerLeave.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(playerLeaveFormat, source.getName()), groupContact.getUserName()));
-        MinecraftEvents.onServerSetupComplete.subscribe((source, d) ->
+        eventOnServerSetupCompleteHandle = MinecraftEvents.onServerSetupComplete.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(serverOnlineFormat), groupContact.getUserName()));
-        MinecraftEvents.onServerBeginShutdown.subscribe((source, d) ->
+        eventOnServerBeginShutdownHandle = MinecraftEvents.onServerBeginShutdown.subscribe((source, d) ->
                 apiClient.sendMessage(String.format(serverOfflineFormat), groupContact.getUserName()));
-        MinecraftEvents.onChatMessage.subscribe((source, msg) ->
+        eventOnChatMessageHandle = MinecraftEvents.onChatMessage.subscribe((source, msg) ->
                 apiClient.sendMessage(String.format(wechatFormat, source.getName(), msg.getMessage()), groupContact.getUserName()));
 
         PlatformEvents.onBridgeLoad.trigger(this, null);
+    }
+
+
+    @Finalizer public void onShutdown() {
+        MinecraftEvents.onServerSetupComplete.unsubscribe(eventOnServerSetupCompleteHandle);
+        MinecraftEvents.onServerBeginShutdown.unsubscribe(eventOnServerBeginShutdownHandle);
+        MinecraftEvents.onChatMessage.unsubscribe(eventOnChatMessageHandle);
+        MinecraftEvents.onPlayerJoin.unsubscribe(eventOnPlayerJoinHandle);
+        MinecraftEvents.onPlayerLeave.unsubscribe(eventOnPlayerLeaveHandle);
+
+        apiClient.shutdown();
+
+        System.out.println("Wechat platform proxy shutdown successfully");
     }
 
     @Override public List<PlatformFeature> getSupportedFeatures() {
