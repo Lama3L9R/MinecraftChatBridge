@@ -11,4 +11,10 @@ public @interface Plugin {
     String name();
 
     PluginType type();
+
+    /**
+     * Higher the priority sooner to call the init method
+     * @return priority
+     */
+    int priority() default 0;
 }

@@ -16,6 +16,7 @@ public class BridgePlugin extends JarPlugin {
     private final List<InstanceBoundCall> initializers;
     private final List<InstanceBoundCall> finalizers;
     private final Config pluginConfig;
+    private final int priority;
     private PluginStatus pluginStatus = PluginStatus.LOADED;
 
     public BridgePlugin(ClassLoaderEx classLoader,
@@ -25,17 +26,19 @@ public class BridgePlugin extends JarPlugin {
         this.platforms = classLoader.getPlatforms();
         this.initializers = classLoader.getInitializers();
         this.finalizers = classLoader.getFinalizers();
+        this.priority = classLoader.getPluginMarker().priority();
 
         pluginConfig = MinecraftChatBridge.getConfig().withFallback(ConfigFactory.parseResourcesAnySyntax(classLoader, "defaults.conf"));
         MinecraftChatBridge.updateConfig(pluginConfig);
     }
 
-    public BridgePlugin(ClassLoader cl, Map<String, Class<?>> classes, String identifier, File file, List<IPlatformProxy> platforms, List<InstanceBoundCall> initializers, List<InstanceBoundCall> finalizers) {
+    public BridgePlugin(ClassLoader cl, Map<String, Class<?>> classes, String identifier, File file, List<IPlatformProxy> platforms, List<InstanceBoundCall> initializers, List<InstanceBoundCall> finalizers, int priority) {
         super(classes, identifier, file);
 
         this.platforms = platforms;
         this.initializers = initializers;
         this.finalizers = finalizers;
+        this.priority = priority;
 
         platforms.forEach(MinecraftChatBridge::register);
 
@@ -77,5 +80,9 @@ public class BridgePlugin extends JarPlugin {
 
     public PluginStatus getPluginStatus() {
         return pluginStatus;
+    }
+
+    public int getPriority() {
+        return priority;
     }
 }

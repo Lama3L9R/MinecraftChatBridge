@@ -30,6 +30,7 @@ public class ClassLoaderEx extends ClassLoader {
     private final HashMap<String, URL> resources = new HashMap<>();
     private final TreeMap<String, URL> constructionPending = new TreeMap<>();
     private final ArrayList<String> loadedClassNames = new ArrayList<>();
+    private Plugin pluginAnno;
     private final File jarFile;
     private String name;
     private BridgePlugin plugin;
@@ -83,7 +84,7 @@ public class ClassLoaderEx extends ClassLoader {
         List<InstanceBoundGet> pendingConfigInjects = new ArrayList<>();
 
         for (var it : loadedClasses.values().stream().filter(it -> it.getName().startsWith("icu.lama")).collect(Collectors.toList())) { // Autoload @Platform, @Initializer and @ConfigInject
-            Plugin platformMarker = (Plugin) it.getAnnotation(Plugin.class);
+            Plugin platformMarker = it.getAnnotation(Plugin.class);
             Object instance = null;
 
 
@@ -102,6 +103,7 @@ public class ClassLoaderEx extends ClassLoader {
             }
 
             if (platformMarker != null) {
+                pluginAnno = platformMarker;
                 name = platformMarker.name();
 
                 if (instance == null) {
@@ -262,5 +264,9 @@ public class ClassLoaderEx extends ClassLoader {
 
     public ArrayList<InstanceBoundCall> getFinalizers() {
         return finalizers;
+    }
+
+    public Plugin getPluginMarker() {
+        return pluginAnno;
     }
 }

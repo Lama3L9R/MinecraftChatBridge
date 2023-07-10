@@ -76,6 +76,7 @@ public class MinecraftChatBridge {
         saveConfig(new File(dataRoot, "core.conf"));
 
         ArrayList<BridgePlugin> pendingInits = new ArrayList<>(loadedPlugins.values()); // Prevent concurrent modification
+        pendingInits.sort(Comparator.comparingInt(BridgePlugin::getPriority));
         pendingInits.forEach(BridgePlugin::init);
     }
 
