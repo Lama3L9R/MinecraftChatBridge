@@ -28,10 +28,6 @@ dependencies {
     implementation 'com.typesafe:config:1.4.2'
     include project(":MinecraftChatBridgeCore")
     implementation project(':MinecraftChatBridgeCore')
-
-    modCompileOnlyApi include("maven.modrinth:easyauth:3.0.0-17")
-
-    // modLocalRuntime "maven.modrinth:easyauth:3.0.0-17"
 }
 
 processResources {
