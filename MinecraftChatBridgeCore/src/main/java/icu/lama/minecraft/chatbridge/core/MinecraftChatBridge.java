@@ -77,6 +77,7 @@ public class MinecraftChatBridge {
 
         ArrayList<BridgePlugin> pendingInits = new ArrayList<>(loadedPlugins.values()); // Prevent concurrent modification
         pendingInits.sort(Comparator.comparingInt(BridgePlugin::getPriority));
+        Collections.reverse(pendingInits); // Load higher priority first
         pendingInits.forEach(BridgePlugin::init);
     }
 

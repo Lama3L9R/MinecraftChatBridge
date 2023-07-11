@@ -16,5 +16,5 @@ public @interface Plugin {
      * Higher the priority sooner to call the init method
      * @return priority
      */
-    int priority() default 0;
+    int priority() default 10;
 }
