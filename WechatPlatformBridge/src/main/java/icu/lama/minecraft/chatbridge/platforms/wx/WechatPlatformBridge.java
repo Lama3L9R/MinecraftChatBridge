@@ -89,9 +89,12 @@ public class WechatPlatformBridge implements IPlatformProxy {
                     .filter(it -> it.toString().contains(targetGroupName))
                     .findFirst()
                     .ifPresentOrElse(
-                        (target) -> groupContact = target,
-                        () -> { throw new RuntimeException("Group not found!");
-                    });
+                        (target) -> {
+                            groupContact = target;
+                            System.out.println("Wechat bridge now listen on " + groupContact.getNickName());
+                        },
+                        () -> { throw new RuntimeException("Group not found!"); }
+                    );
 
             String encry = apiClient.queryContactInformation(groupContact.getUserName()).getEncryChatRoomId();
             apiClient.queryContactInformation(groupContact.getMemberList()

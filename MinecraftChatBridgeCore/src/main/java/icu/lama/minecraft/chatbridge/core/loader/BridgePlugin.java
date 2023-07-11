@@ -53,7 +53,6 @@ public class BridgePlugin extends JarPlugin {
         } catch (Throwable ex) {
             pluginStatus = PluginStatus.FAILED;
             MinecraftChatBridge.getErrorHandler().onError(ex, this);
-            MinecraftChatBridge.unloadPlugin(this);
         }
     }
 

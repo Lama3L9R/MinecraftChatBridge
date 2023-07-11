@@ -41,7 +41,7 @@ public class WXApiClient {
     public void init(OnMessageCallback onMessage) throws Exception {
         this.onMessage = onMessage;
 
-        taskExecutor = Executors.newScheduledThreadPool(2);
+        taskExecutor = Executors.newScheduledThreadPool(1);
 
         RequestWxInit request = new RequestWxInit(base);
         HttpRequestResult result = RequestHelper.post("https://wx.qq.com/cgi-bin/mmwebwx-bin/webwxinit"
@@ -188,10 +188,10 @@ public class WXApiClient {
         var response = RequestHelper.get(redirectURL + "&version=v2&fun=new&mod=desktop&target=t");
         var xml = response.toString();
 
-        var skey = xml.substring(xml.indexOf("<skey>") + 1, xml.indexOf("</skey>"));
-        var wxsid = xml.substring(xml.indexOf("<wxsid>") + 1, xml.indexOf("</wxsid>"));
-        var wxuin = xml.substring(xml.indexOf("<wxuin>") + 1, xml.indexOf("</wxuin>"));
-        var passTicket = xml.substring(xml.indexOf("<pass_ticket>") + 1, xml.indexOf("</pass_ticket>"));
+        var skey = xml.substring(xml.indexOf("<skey>") + 6, xml.indexOf("</skey>"));
+        var wxsid = xml.substring(xml.indexOf("<wxsid>") + 7, xml.indexOf("</wxsid>"));
+        var wxuin = xml.substring(xml.indexOf("<wxuin>") + 7, xml.indexOf("</wxuin>"));
+        var passTicket = xml.substring(xml.indexOf("<pass_ticket>") + 13, xml.indexOf("</pass_ticket>"));
         var cookie = response.getConnection().getHeaderField("set-cookie");
 
         this.base = new RequestBase(Long.parseLong(wxuin), wxsid, skey, "e" + String.valueOf(new Random().nextLong()).substring(1, 16));
