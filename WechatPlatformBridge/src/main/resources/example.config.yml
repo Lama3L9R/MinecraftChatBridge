@@ -1,9 +1,0 @@
-wechat:
-  extraContents:
-    group: "some group name"
-  credentials:
-    skey: ""
-    wxsid: ""
-    wxuin: ""
-    passTicket: ""
-    cookie: ""

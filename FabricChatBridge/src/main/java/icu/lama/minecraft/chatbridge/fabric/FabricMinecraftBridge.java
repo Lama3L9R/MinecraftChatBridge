@@ -1,107 +1,163 @@
 package icu.lama.minecraft.chatbridge.fabric;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import icu.lama.minecraft.chatbridge.core.MinecraftChatBridge;
-import icu.lama.minecraft.chatbridge.core.MinecraftReceiveCallback;
-import icu.lama.minecraft.chatbridge.core.config.ChatBridgeConfiguration;
-import icu.lama.minecraft.chatbridge.core.config.PlatformConfiguration;
+import icu.lama.minecraft.chatbridge.core.events.EventMinecraftChatMessage;
 import icu.lama.minecraft.chatbridge.core.events.MinecraftEvents;
+import icu.lama.minecraft.chatbridge.core.events.PlatformEvents;
 import icu.lama.minecraft.chatbridge.core.events.minecraft.MinecraftEventSource;
-import icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge;
-import icu.lama.minecraft.chatbridge.core.platform.IPlatformBridge;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
+import icu.lama.minecraft.chatbridge.core.proxy.command.CommandManager;
+import icu.lama.minecraft.chatbridge.core.proxy.command.SimpleCommandManagerImpl;
+import icu.lama.minecraft.chatbridge.core.proxy.minecraft.IMinecraftServerProxy;
+import icu.lama.minecraft.chatbridge.core.proxy.minecraft.IProxyPlayer;
+import icu.lama.minecraft.chatbridge.core.proxy.minecraft.ServerType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import org.apache.commons.lang3.NotImplementedException;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class FabricMinecraftBridge implements ModInitializer, IMinecraftBridge {
-   private final Logger LOGGER = LoggerFactory.getLogger("MinecraftChatBridge");
-   private final Gson GSON = new Gson();
-   private final File configFile = new File(FabricLoader.getInstance().getConfigDir().toFile(), "MinecraftChatBridge.json");
-   private MinecraftReceiveCallback callback;
-   private MinecraftServer serverInstance;
-   private String format = "[%s] <%s> %s";
+public class FabricMinecraftBridge implements ModInitializer, IMinecraftServerProxy {
+    private final Logger LOGGER = LoggerFactory.getLogger("MinecraftChatBridge");
+    private final CommandManager commandManager = new SimpleCommandManagerImpl();
+    public static FabricMinecraftBridge INSTANCE;
+    private MinecraftServer serverInstance;
 
-   @Override public void onInitialize() {
-      if (!this.configFile.exists()) {
-         try {
-            this.configFile.createNewFile();
-         } catch (IOException var3) {
-            throw new RuntimeException(var3);
-         }
-      }
+    public FabricMinecraftBridge() {
+        INSTANCE = this;
+    }
 
-      try {
-         // Forward events
-         ServerLifecycleEvents.SERVER_STARTED.register((server) -> {
-            this.serverInstance = server;
+    @Override public void onInitialize() {
+        try {
+            // Load core
+            MinecraftChatBridge.init(new File("chat-bridge"), this);
+            LOGGER.info("MinecraftChatBridge initialized complete");
 
-            MinecraftEvents.onServerSetupComplete.trigger(null, server);
-         });
+            // Forward events
+            ServerLifecycleEvents.SERVER_STARTING.register(server -> this.serverInstance = server);
 
-         ServerLifecycleEvents.SERVER_STOPPING.register((server) -> {
-            MinecraftEvents.onServerBeginShutdown.trigger(null, null);
-         });
+            ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+                this.serverInstance = server;
 
-         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            ServerPlayerEntity sPlayer = handler.getPlayer();
-            MinecraftEvents.onPlayerJoin.trigger(new MinecraftEventSource(sPlayer.getUuid(), sPlayer.getName().getString(), false), null);
-         });
+                MinecraftEvents.onServerSetupComplete.trigger(null, server);
+            });
 
-         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            ServerPlayerEntity sPlayer = handler.getPlayer();
-            MinecraftEvents.onPlayerLeave.trigger(new MinecraftEventSource(sPlayer.getUuid(), sPlayer.getName().getString(), false), null);
-         });
+            ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+                MinecraftEvents.onServerBeginShutdown.trigger(null, null);
+            });
 
-         // Load core
-         ModConfig config = this.GSON.fromJson(new FileReader(this.configFile), new TypeToken<>() {});
-         if (config.format != null && !config.format.isEmpty()) {
-            LOGGER.info("Override default format to: " + config.format);
-            this.format = config.format;
-         } else {
-            LOGGER.info("Missing format, using default one: " + format);
-         }
+            ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+                ServerPlayerEntity sPlayer = handler.getPlayer();
+                MinecraftEvents.onPlayerJoin.trigger(
+                        new MinecraftEventSource(
+                                sPlayer.getUuid(),
+                                sPlayer.getName().getString(),
+                                new MinecraftServerPlayerEntityProxy(sPlayer),
+                                false
+                        ),
+                        null
+                );
+            });
 
-         MinecraftChatBridge.init(config.core, config.platformConf, this, (e, source) ->
-                 this.LOGGER.error("Runtime error thrown by " + source.getPlatformName(), e)
-         );
-         LOGGER.info("MinecraftChatBridge initialized complete");
+            ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+                ServerPlayerEntity sPlayer = handler.getPlayer();
+                MinecraftEvents.onPlayerLeave.trigger(
+                        new MinecraftEventSource(
+                                sPlayer.getUuid(),
+                                sPlayer.getName().getString(),
+                                new MinecraftServerPlayerEntityProxy(sPlayer),
+                                false
+                        ),
+                        null
+                );
+            });
 
-         ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) ->
-                 this.callback.onReceive(sender.getName().getString(), sender.getUuid(), message.getSignedContent())
-         );
-      } catch (Exception e) {
-         throw new RuntimeException(e);
-      }
-   }
+            ServerMessageEvents.CHAT_MESSAGE.register((message, sender, params) -> {
+                var from = new MinecraftServerPlayerEntityProxy(sender);
+                var msg = new EventMinecraftChatMessage(message.getContent().getString(), from, false);
 
-   @Override public void send(String name, @Nullable UUID uuid, IPlatformBridge bridge, String msg) {
-      if (this.serverInstance != null) {
-         this.serverInstance.getPlayerManager().broadcast(Text.of(String.format(this.format, bridge.getPlatformName(), name, msg)), false);
-      }
-   }
+                MinecraftEvents.onChatMessage.trigger(
+                        new MinecraftEventSource(
+                                sender.getUuid(),
+                                sender.getName().getString(),
+                                from,
+                                false
+                        ),
+                        msg
+                );
 
-   @Override public void setReceiveCallback(MinecraftReceiveCallback callback) {
-      this.callback = callback;
-   }
+                if (msg.isCanceled()) {
+                    // It looks like it is impossible to cancel this event...
+                    // I guess it is possible to do it with mixins
+                    // lazy...
+                }
+            });
 
-   public class ModConfig {
-      public ChatBridgeConfiguration core;
-      public Map<String, PlatformConfiguration> platformConf;
-      public String format;
-   }
+            PlatformEvents.onMessage.subscribe((source, msg) -> {
+                var config = MinecraftChatBridge.getConfig();
 
+                this.serverInstance.getPlayerManager().broadcast(Text.of(String.format(MinecraftChatBridge.getConfig().getString("loader.format"), source.getPlatformName(), msg.getFromUser().getName(), msg.getMessage())), false);
+            });
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static FabricMinecraftBridge getInstance() {
+        return INSTANCE;
+    }
+
+    @Override public Object unwrap() {
+        return this.serverInstance;
+    }
+
+    @Override public List<IProxyPlayer> getOnlinePlayers() {
+        return serverInstance.getPlayerManager().getPlayerList()
+                .stream()
+                .map(MinecraftServerPlayerEntityProxy::new)
+                .collect(Collectors.toList());
+    }
+    @Override public List<String> getMotd() {
+        return null;
+    }
+
+    @Override public @Nullable IProxyPlayer getPlayer(@NotNull UUID uuid) {
+        return new MinecraftServerPlayerEntityProxy(serverInstance.getPlayerManager().getPlayer(uuid));
+    }
+
+    @Override public @Nullable IProxyPlayer getPlayer(@NotNull String name) {
+        return new MinecraftServerPlayerEntityProxy(serverInstance.getPlayerManager().getPlayer(name));
+    }
+
+    @Override public ServerType getServerType() {
+        return ServerType.MINECRAFT_MODDED_SERVER;
+    }
+
+    @Override public void broadcast(String msg) {
+
+    }
+
+    @Override public void broadcastPacket(Object data) {
+        throw new NotImplementedException("Not supported operation");
+    }
+
+    @Override public void broadcastPacket(byte[] data) {
+        throw new NotImplementedException("Not supported operation");
+    }
+
+    @Override public CommandManager getCommandManager() {
+        return this.commandManager;
+    }
 }

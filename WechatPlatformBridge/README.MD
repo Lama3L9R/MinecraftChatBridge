@@ -11,7 +11,8 @@ _官方支持的微信平台链接桥_
 
 1. 安装最新的 `python3`
 2. 执行 `pip install requests`
-3. 使用 `python scanhelper.py`
+3. 执行 `pip install pillow`
+4. 使用 `python scanhelper.py` 登录
 
 **_使用时需要注意_**
 
@@ -37,53 +38,30 @@ Apply these values to the bridge crendentials configuration.
 
 ### 然后就是配置文件
 
-你需要向配置文件里写入刚刚的登录信息，下面是几个示例
-
-```yaml
-# yml
-wechat:
-  extraContents:
-    group: "some group name"
-  credentials:
-    skey: ""
-    wxsid: ""
-    wxuin: ""
-    passTicket: ""
-    cookie: ""
-```
-
-```toml
-# toml
-[wechat.extraContents]
-group = "some group name"
-[wechat.credentials]
-skey = ""
-wxsid = ""
-wxuin = ""
-passTicket = ""
-cookie = ""
-```
-
-```json
-//json
-
-{
-  "wechat": {
-    "extraContents": {
-      "group": "some group name"
-    },
-    "credentials": {
-      "skey": "",
-      "wxsid": "",
-      "wxuin": "",
-      "passTicket": "",
-      "cookie": ""
-    }
+配置文件已经在 ChatBridge 2.0.0 以后更新为 HOCON 格式
+```hocon
+wechat {
+  lang {
+    wechatFormat: "[%s] %s"
+    playerJoinFormat: "[+] %s"
+    playerLeaveFormat: "[-] %s"
+    serverOnlineFormat: "[+] Server"
+    serverOfflineFormat: "[-] Server"
   }
+
+  credentials {
+    cookie: """
+      <Your cookie here>
+    """
+    wxuin: ""
+    wxsid: ""
+    skey: ""
+    passTicket: ""
+  }
+
+  listenOn: ""
 }
 ```
-
-具体是什么配置文件，什么格式，文件放在哪里，要看 MinecraftBridge 的要求
 
 ## 我是开发者，我想贡献代码
 

@@ -1,5 +1,0 @@
-telegram:
-  extraContents:
-    chatId: -114514
-  credentials:
-    botToken: "YOU_BOT_TOKEN_HERE"

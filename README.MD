@@ -8,9 +8,12 @@
 目前官方已有 `telegram`、`wechat`、`fabric`  平台官方支持，未来将加入 `Bukkit` `Forge` `Tencent-QQ` 等官方支持。
 
 ### 我是用户
-哦我的上帝，别来看我啊，去找对应的MC支持的帮助文件看啊！我怎么会知道对应的MC支持需要用的配置文件是啥格式啊！
+自从 ChatBridge 2.0.0 起配置文件已经全面统一为 HOCON！
 
 ### 我想开发 MC 支持
-您只需参考官方的 TestMinecraftBridge 进行开发即可，仅需要实现 接口`icu.lama.minecraft.chatbridge.core.minecraft.IMinecraftBridge` 即可
+您只需参考官方的 TestMinecraftBridge 进行开发即可，仅需要实现 接口 `icu.lama.minecraft.chatbridge.core.proxy.minecraft.IMinecraftServerProxy` 即可
 
-您还需要在您的 插件/mod... 加载的时候调用 `MinecraftChatBridge#init`，前两个参数为配置文件，需要您根据兼容的平台不同进行配置文件加载（比如`Bukkit`上使用`SnakeYaml(BukkitConfiguration)` 进行配置文件加载）
+您还需要在您的 插件/mod... 加载的时候调用 `MinecraftChatBridge#init`，
+
+### 我想开发 聊天平台 支持
+参考 TelegramChatBridge 进行开发

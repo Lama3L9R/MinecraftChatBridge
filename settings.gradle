@@ -16,5 +16,4 @@ include 'TelegramPlatformBridge'
 include 'TestMinecraftBridge'
 include 'WechatPlatformBridge'
 include 'FabricChatBridge'
-include 'FabricChatBridge'
 
